@@ -28,6 +28,7 @@ export async function createTestApp(): Promise<NestFastifyApplication> {
   app.useGlobalFilters(new HttpExceptionFilter());
 
   await app.init();
+  await app.getHttpAdapter().getInstance().ready();
 
   return app;
 }
