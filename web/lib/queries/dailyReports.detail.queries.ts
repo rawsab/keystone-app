@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   getDailyReport,
   updateDailyReport,
+  submitDailyReport,
   UpdateDailyReportPayload,
 } from "../api/endpoints/dailyReports";
 
@@ -29,6 +30,23 @@ export function useUpdateDailyReport(reportId: string, projectId?: string) {
           queryKey: ["projects", projectId, "dailyReports"],
         });
       }
+    },
+  });
+}
+
+export function useSubmitDailyReport(reportId: string, projectId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: () => submitDailyReport(reportId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["dailyReports", "detail", reportId],
+      });
+
+      queryClient.invalidateQueries({
+        queryKey: ["projects", projectId, "dailyReports"],
+      });
     },
   });
 }

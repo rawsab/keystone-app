@@ -5,12 +5,15 @@ import { useSearchParams } from "next/navigation";
 import {
   useDailyReport,
   useUpdateDailyReport,
+  useSubmitDailyReport,
 } from "@/lib/queries/dailyReports.detail.queries";
 import { useProject } from "@/lib/queries/projects.queries";
 import { ReportHeader } from "@/components/app/daily-reports/ReportHeader";
 import { ReportEditor } from "@/components/app/daily-reports/ReportEditor";
 import { AttachmentsSection } from "@/components/app/daily-reports/AttachmentsSection";
+import { SubmitReportDialog } from "@/components/app/daily-reports/SubmitReportDialog";
 import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "@/hooks/use-toast";
 import {
   Card,
   CardContent,
@@ -66,12 +69,16 @@ export default function DailyReportDetailPage({
   }
 
   const updateMutation = useUpdateDailyReport(reportId, projectId);
+  const submitMutation = useSubmitDailyReport(reportId, projectId);
 
   const isReadOnly = report?.status === "SUBMITTED";
 
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [lastSavedData, setLastSavedData] = useState<string>("");
   const [localUpdatedAt, setLocalUpdatedAt] = useState<string | null>(null);
+  const [submitDialogOpen, setSubmitDialogOpen] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   const handleFormChange = (field: string, value: string) => {
     setFormData((prev) => ({
@@ -79,6 +86,49 @@ export default function DailyReportDetailPage({
       [field]: value,
     }));
     setHasUnsavedChanges(true);
+    setValidationError(null);
+  };
+
+  const handleSubmitClick = () => {
+    setValidationError(null);
+
+    const workCompleted = formData.work_completed_text.trim();
+    if (!workCompleted) {
+      setValidationError("Work completed is required to submit this report.");
+      return;
+    }
+
+    if (hasUnsavedChanges) {
+      setValidationError("Please save your changes before submitting.");
+      return;
+    }
+
+    setSubmitDialogOpen(true);
+  };
+
+  const handleSubmitConfirm = () => {
+    setSubmitError(null);
+
+    submitMutation.mutate(undefined, {
+      onSuccess: (response) => {
+        if (response.error) {
+          setSubmitError(response.error.message);
+          return;
+        }
+
+        toast({
+          title: "Report submitted",
+          description: "The daily report has been submitted successfully.",
+        });
+
+        setSubmitDialogOpen(false);
+      },
+      onError: (error) => {
+        setSubmitError(
+          error instanceof Error ? error.message : "Failed to submit report",
+        );
+      },
+    });
   };
 
   const handleSave = useCallback(() => {
@@ -228,24 +278,40 @@ export default function DailyReportDetailPage({
       />
 
       {!isReadOnly && (
-        <div className="flex justify-end items-center gap-3">
-          {hasUnsavedChanges && (
-            <span className="text-sm text-muted-foreground">
-              Unsaved changes
-            </span>
+        <div className="space-y-3">
+          {validationError && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{validationError}</AlertDescription>
+            </Alert>
           )}
-          {updateMutation.isError && (
-            <span className="text-sm text-destructive">
-              Failed to save: {updateMutation.error?.message || "Unknown error"}
-            </span>
-          )}
-          <Button
-            onClick={handleSave}
-            disabled={!hasUnsavedChanges || updateMutation.isPending}
-            size="default"
-          >
-            {updateMutation.isPending ? "Saving..." : "Save Changes"}
-          </Button>
+
+          <div className="flex justify-end items-center gap-3">
+            {hasUnsavedChanges && (
+              <span className="text-sm text-muted-foreground">
+                Unsaved changes
+              </span>
+            )}
+            {updateMutation.isError && (
+              <span className="text-sm text-destructive">
+                Failed to save:{" "}
+                {updateMutation.error?.message || "Unknown error"}
+              </span>
+            )}
+            <Button
+              onClick={handleSave}
+              disabled={!hasUnsavedChanges || updateMutation.isPending}
+              variant="outline"
+            >
+              {updateMutation.isPending ? "Saving..." : "Save Changes"}
+            </Button>
+            <Button
+              onClick={handleSubmitClick}
+              disabled={updateMutation.isPending || submitMutation.isPending}
+            >
+              Submit Report
+            </Button>
+          </div>
         </div>
       )}
 
@@ -260,6 +326,14 @@ export default function DailyReportDetailPage({
         projectId={projectId}
         attachments={report.attachments || []}
         isReadOnly={isReadOnly}
+      />
+
+      <SubmitReportDialog
+        open={submitDialogOpen}
+        onOpenChange={setSubmitDialogOpen}
+        onConfirm={handleSubmitConfirm}
+        isSubmitting={submitMutation.isPending}
+        error={submitError}
       />
     </div>
   );

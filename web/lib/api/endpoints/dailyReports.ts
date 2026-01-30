@@ -89,3 +89,12 @@ export async function updateDailyReport(
   console.log("Response:", result);
   return result;
 }
+
+export async function submitDailyReport(
+  reportId: string,
+): ApiResult<DailyReportDetail> {
+  return apiClient.post<DailyReportDetail>(
+    `/daily-reports/${reportId}/submit`,
+    {},
+  );
+}
