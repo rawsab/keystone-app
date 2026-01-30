@@ -47,7 +47,7 @@ export default function RegisterPage() {
         queryClient.invalidateQueries({ queryKey: ["session"] });
         router.push("/");
       }
-    } catch (err) {
+    } catch {
       setError("An unexpected error occurred");
     } finally {
       setIsLoading(false);

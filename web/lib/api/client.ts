@@ -38,7 +38,7 @@ export class ApiClient {
 
       const data = await response.json();
       return data as ApiResponse<T>;
-    } catch (error) {
+    } catch {
       return {
         data: null,
         error: {

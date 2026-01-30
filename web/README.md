@@ -48,6 +48,8 @@ Open [http://localhost:3001](http://localhost:3001) in your browser.
 
 The dashboard will be served at the root path `/`.
 
+**Note:** You must be logged in to access the app. On first visit, you'll be redirected to `/login`.
+
 ### Build
 
 ```bash
@@ -59,31 +61,52 @@ npm start
 
 ```
 app/
-  (auth)/          # Unauthenticated routes (future)
+  (auth)/          # Unauthenticated routes
+    login/         # Login page
+    register/      # Registration page
+    layout.tsx     # Auth layout
   (app)/           # Authenticated app routes
-    layout.tsx     # App shell with sidebar + header
+    layout.tsx     # Route guard + app shell
     page.tsx       # Dashboard
+    projects/      # Projects section
+      page.tsx     # Project list (W4)
+    settings/      # Settings section
+      page.tsx     # Settings (future)
   layout.tsx       # Root layout with providers
 components/
   ui/              # shadcn/ui components (generated)
+    button.tsx
+    card.tsx
+    alert.tsx
+    skeleton.tsx
+    sheet.tsx
+    dropdown-menu.tsx
+    separator.tsx
+    badge.tsx
   app/
     layout/        # App shell components
       AppShell.tsx
       AppHeader.tsx
       AppSidebar.tsx
+      MobileSidebar.tsx
     HealthCheck.tsx
 lib/
   api/
-    client.ts      # Base API client
+    auth.ts        # Token storage (Bearer MVP)
+    client.ts      # Base API client with auth
     types.ts       # API response types
     errors.ts      # Error handling utilities
     endpoints/
       health.ts    # Health check endpoint
+      auth.ts      # Auth endpoints (login, signup, me)
   providers/
     query-provider.tsx
     theme-provider.tsx
-    auth-provider.tsx (stub)
+    session-provider.tsx  # Session management
+  routes.ts        # Centralized route definitions
 ```
+
+---
 
 ## Development Guidelines
 
