@@ -98,3 +98,13 @@ export async function submitDailyReport(
     {},
   );
 }
+
+export async function getOrCreateDailyReportDraft(
+  projectId: string,
+  reportDate: string,
+): ApiResult<DailyReportDetail> {
+  return apiClient.post<DailyReportDetail>(
+    `/projects/${projectId}/daily-reports`,
+    { report_date: reportDate },
+  );
+}

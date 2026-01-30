@@ -4,6 +4,7 @@ import { use, useState, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useDailyReportsList } from "@/lib/queries/dailyReports.queries";
 import { useProject } from "@/lib/queries/projects.queries";
+import { CreateDailyReportDialog } from "@/components/app/daily-reports/CreateDailyReportDialog";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -125,13 +126,16 @@ export default function DailyReportsListPage({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Daily Reports</h1>
-        {projectLoading ? (
-          <Skeleton className="h-4 w-48 mt-2" />
-        ) : project ? (
-          <p className="text-muted-foreground mt-1">{project.name}</p>
-        ) : null}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Daily Reports</h1>
+          {projectLoading ? (
+            <Skeleton className="h-4 w-48 mt-2" />
+          ) : project ? (
+            <p className="text-muted-foreground mt-1">{project.name}</p>
+          ) : null}
+        </div>
+        <CreateDailyReportDialog projectId={projectId} />
       </div>
 
       <Card>

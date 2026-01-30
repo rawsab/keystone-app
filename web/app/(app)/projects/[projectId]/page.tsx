@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useProject } from "@/lib/queries/projects.queries";
 import { useDailyReportsList } from "@/lib/queries/dailyReports.queries";
 import { useProjectMembers } from "@/lib/queries/members.queries";
+import { CreateDailyReportDialog } from "@/components/app/daily-reports/CreateDailyReportDialog";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -25,7 +26,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { AlertCircle, RefreshCw, ExternalLink } from "lucide-react";
+import { AlertCircle, RefreshCw, ExternalLink, Plus } from "lucide-react";
 import { routes } from "@/lib/routes";
 import { format, formatDistanceToNow } from "date-fns";
 
@@ -197,9 +198,21 @@ export default function ProjectDashboardPage({
                 !reportsError &&
                 !reportsApiError &&
                 recentReports.length === 0 && (
-                  <p className="text-sm text-muted-foreground">
-                    No daily reports yet. Reports will appear here once created.
-                  </p>
+                  <div className="space-y-3">
+                    <p className="text-sm text-muted-foreground">
+                      No daily reports yet. Reports will appear here once
+                      created.
+                    </p>
+                    <CreateDailyReportDialog
+                      projectId={projectId}
+                      trigger={
+                        <Button size="sm" variant="outline">
+                          <Plus className="mr-0 h-4 w-4" />
+                          Create Report
+                        </Button>
+                      }
+                    />
+                  </div>
                 )}
 
               {!reportsLoading &&
