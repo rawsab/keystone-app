@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import { LayoutDashboard, FolderKanban, Settings } from "lucide-react";
 
 import { NavMain } from "@/components/nav-main";
@@ -11,9 +12,36 @@ import {
   SidebarFooter,
   SidebarHeader,
   SidebarRail,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import { useSession } from "@/lib/providers/session-provider";
 import { routes } from "@/lib/routes";
+
+function SidebarLogo() {
+  const { state } = useSidebar();
+  const isCollapsed = state === "collapsed";
+
+  return (
+    <div className="flex h-12 items-center gap-3 px-1">
+      <div className="flex h-6 w-6 items-center justify-center flex-shrink-0">
+        <Image
+          src="/logo/keystone_logo.png"
+          alt="Keystone"
+          width={32}
+          height={32}
+          className="rounded-none"
+        />
+      </div>
+      <h1
+        className={`text-lg font-semibold text-sidebar-foreground transition-opacity duration-200 ${
+          isCollapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100"
+        }`}
+      >
+        Keystone
+      </h1>
+    </div>
+  );
+}
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { user } = useSession();
@@ -40,15 +68,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
-        <div className="flex h-12 items-center px-4">
-          <h1 className="text-lg font-semibold">Keystone</h1>
-        </div>
+        <SidebarLogo />
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={navMain} />
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={user || { name: "User", email: "", avatar: "" }} />
+        <NavUser user={user || { name: "User", email: "" }} />
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>
