@@ -17,6 +17,40 @@ export interface DailyReportsFilters {
   to_date?: string;
 }
 
+export interface DailyReportAttachment {
+  id: string;
+  original_filename: string;
+  mime_type: string;
+  size_bytes: number;
+}
+
+export interface DailyReportDetail {
+  id: string;
+  project_id: string;
+  report_date: string;
+  status: string;
+  work_completed_text: string;
+  issues_delays_text: string | null;
+  notes_text: string | null;
+  weather_observed: Record<string, unknown> | null;
+  hours_worked_total: number | null;
+  created_by: {
+    id: string;
+    full_name: string;
+  };
+  submitted_at: string | null;
+  updated_at: string;
+  attachments: DailyReportAttachment[];
+}
+
+export interface UpdateDailyReportPayload {
+  work_completed_text?: string;
+  issues_delays_text?: string;
+  notes_text?: string;
+  weather_observed?: Record<string, unknown>;
+  hours_worked_total?: number;
+}
+
 export async function listDailyReports(
   projectId: string,
   filters?: DailyReportsFilters,
@@ -34,4 +68,24 @@ export async function listDailyReports(
   }
 
   return apiClient.get<DailyReportListItem[]>(url);
+}
+
+export async function getDailyReport(
+  reportId: string,
+): ApiResult<DailyReportDetail> {
+  return apiClient.get<DailyReportDetail>(`/daily-reports/${reportId}`);
+}
+
+export async function updateDailyReport(
+  reportId: string,
+  payload: UpdateDailyReportPayload,
+): ApiResult<DailyReportDetail> {
+  console.log("API Call - PATCH /daily-reports/" + reportId);
+  console.log("Payload:", payload);
+  const result = await apiClient.patch<DailyReportDetail>(
+    `/daily-reports/${reportId}`,
+    payload,
+  );
+  console.log("Response:", result);
+  return result;
 }

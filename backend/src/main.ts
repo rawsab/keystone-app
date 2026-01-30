@@ -2,7 +2,7 @@ import 'dotenv/config';
 import { NestFactory } from '@nestjs/core';
 import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
 import { ValidationPipe } from '@nestjs/common';
-import fastifyCors from '@fastify/cors';
+import cors from '@fastify/cors';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { EnvService } from './config/env.service';
@@ -13,9 +13,21 @@ import { EnvService } from './config/env.service';
 async function bootstrap() {
   const app = await NestFactory.create<NestFastifyApplication>(AppModule, new FastifyAdapter());
 
-  await app.register(fastifyCors, {
-    origin: ['http://localhost:3001', 'http://localhost:3000'],
-    credentials: true,
+  // ✅ Fastify CORS (single source of truth)
+  await app.register(cors, {
+    origin: (origin, cb) => {
+      // allow non-browser clients (curl/postman) with no Origin
+      if (!origin) return cb(null, true);
+
+      const allowed = new Set(['http://localhost:3001']);
+      cb(null, allowed.has(origin));
+    },
+    credentials: false, // Bearer auth, not cookies
+    methods: 'GET,HEAD,POST,PUT,PATCH,DELETE,OPTIONS',
+    allowedHeaders: 'Content-Type,Authorization,Accept',
+    exposedHeaders: 'Content-Length,X-Keystone-Api-Version',
+    optionsSuccessStatus: 204,
+    preflightContinue: false,
   });
 
   app.useGlobalPipes(
