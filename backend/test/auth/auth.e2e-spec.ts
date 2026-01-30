@@ -1,13 +1,26 @@
 import { NestFastifyApplication } from '@nestjs/platform-fastify';
 import { createTestApp } from '../helpers/test-app';
+import { PrismaService } from '../../src/infra/db/prisma.service';
 
 describe('Auth E2E', () => {
   let app: NestFastifyApplication;
-  const uniqueEmail = `test-${Date.now()}@example.com`;
+  let prisma: PrismaService;
+  const uniqueEmail = `test-${Date.now()}-${Math.random().toString(36).substring(7)}@example.com`;
   let authToken: string;
 
   beforeAll(async () => {
     app = await createTestApp();
+    prisma = app.get(PrismaService);
+
+    // Clean up test database before running tests
+    await prisma.auditEvent.deleteMany({});
+    await prisma.dailyReportAttachment.deleteMany({});
+    await prisma.dailyReport.deleteMany({});
+    await prisma.fileObject.deleteMany({});
+    await prisma.projectMember.deleteMany({});
+    await prisma.project.deleteMany({});
+    await prisma.user.deleteMany({});
+    await prisma.company.deleteMany({});
   }, 30000);
 
   afterAll(async () => {
