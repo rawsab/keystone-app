@@ -1,12 +1,12 @@
-import 'dotenv/config';
+import { config } from 'dotenv';
+import { resolve } from 'path';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ValidationPipe } from '@nestjs/common';
-import {
-  FastifyAdapter,
-  NestFastifyApplication,
-} from '@nestjs/platform-fastify';
+import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
 import { AppModule } from '../../src/app.module';
 import { HttpExceptionFilter } from '../../src/common/filters/http-exception.filter';
+
+config({ path: resolve(__dirname, '../../.env.test') });
 
 /**
  * Create and configure a NestJS test application
@@ -16,9 +16,7 @@ export async function createTestApp(): Promise<NestFastifyApplication> {
     imports: [AppModule],
   }).compile();
 
-  const app = moduleFixture.createNestApplication<NestFastifyApplication>(
-    new FastifyAdapter(),
-  );
+  const app = moduleFixture.createNestApplication<NestFastifyApplication>(new FastifyAdapter());
 
   app.useGlobalPipes(
     new ValidationPipe({
