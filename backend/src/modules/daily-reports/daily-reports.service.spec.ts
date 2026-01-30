@@ -1,5 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  NotFoundException,
+  ConflictException,
+  BadRequestException,
+} from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { DailyReportsService } from './daily-reports.service';
 import { PrismaService } from '../../infra/db/prisma.service';
@@ -12,6 +17,7 @@ describe('DailyReportsService', () => {
   let mockPrismaFindMany: jest.Mock;
   let mockPrismaFindFirst: jest.Mock;
   let mockPrismaCreate: jest.Mock;
+  let mockPrismaUpdate: jest.Mock;
   let mockMembershipVerifyProjectExists: jest.Mock;
   let mockMembershipIsProjectMember: jest.Mock;
   let mockAuditRecord: jest.Mock;
@@ -28,6 +34,7 @@ describe('DailyReportsService', () => {
     mockPrismaFindMany = jest.fn();
     mockPrismaFindFirst = jest.fn();
     mockPrismaCreate = jest.fn();
+    mockPrismaUpdate = jest.fn();
     mockMembershipVerifyProjectExists = jest.fn();
     mockMembershipIsProjectMember = jest.fn();
     mockAuditRecord = jest.fn();
@@ -37,6 +44,7 @@ describe('DailyReportsService', () => {
         findMany: mockPrismaFindMany,
         findFirst: mockPrismaFindFirst,
         create: mockPrismaCreate,
+        update: mockPrismaUpdate,
       },
     };
 
@@ -417,6 +425,442 @@ describe('DailyReportsService', () => {
         },
         include: expect.any(Object),
       });
+    });
+  });
+
+  describe('getById', () => {
+    const reportId = 'report-1';
+
+    const mockReportWithAttachments = {
+      id: 'report-1',
+      projectId: 'project-1',
+      reportDate: new Date('2026-01-29'),
+      status: DailyReportStatus.DRAFT,
+      workCompletedText: 'Completed framing',
+      issuesDelaysText: null,
+      notesText: null,
+      weatherObserved: { condition: 'CLEAR', temperature_c: 15 },
+      hoursWorkedTotal: 8,
+      submittedAt: null,
+      updatedAt: new Date('2026-01-29T15:00:00Z'),
+      createdBy: {
+        id: 'user-1',
+        fullName: 'John Doe',
+      },
+      attachments: [
+        {
+          fileObject: {
+            id: 'file-1',
+            originalFilename: 'photo.jpg',
+            mimeType: 'image/jpeg',
+            sizeBytes: BigInt(123456),
+          },
+        },
+      ],
+    };
+
+    it('should allow project member to get report', async () => {
+      mockPrismaFindFirst.mockResolvedValue(mockReportWithAttachments);
+      mockMembershipIsProjectMember.mockResolvedValue(true);
+
+      const result = await service.getById(memberUser, reportId);
+
+      expect(result).toEqual({
+        id: 'report-1',
+        project_id: 'project-1',
+        report_date: '2026-01-29',
+        status: DailyReportStatus.DRAFT,
+        work_completed_text: 'Completed framing',
+        issues_delays_text: null,
+        notes_text: null,
+        weather_observed: { condition: 'CLEAR', temperature_c: 15 },
+        hours_worked_total: 8,
+        created_by: {
+          id: 'user-1',
+          full_name: 'John Doe',
+        },
+        submitted_at: null,
+        updated_at: '2026-01-29T15:00:00.000Z',
+        attachments: [
+          {
+            id: 'file-1',
+            original_filename: 'photo.jpg',
+            mime_type: 'image/jpeg',
+            size_bytes: 123456,
+          },
+        ],
+      });
+    });
+
+    it('should deny non-member from getting report', async () => {
+      mockPrismaFindFirst.mockResolvedValue(mockReportWithAttachments);
+      mockMembershipIsProjectMember.mockResolvedValue(false);
+
+      await expect(service.getById(memberUser, reportId)).rejects.toThrow(ForbiddenException);
+      await expect(service.getById(memberUser, reportId)).rejects.toThrow('Not a project member');
+    });
+
+    it('should throw NotFoundException if report does not exist', async () => {
+      mockPrismaFindFirst.mockResolvedValue(null);
+
+      await expect(service.getById(memberUser, reportId)).rejects.toThrow(NotFoundException);
+      await expect(service.getById(memberUser, reportId)).rejects.toThrow('Daily report not found');
+    });
+
+    it('should scope query by companyId and exclude deleted reports', async () => {
+      mockPrismaFindFirst.mockResolvedValue(mockReportWithAttachments);
+      mockMembershipIsProjectMember.mockResolvedValue(true);
+
+      await service.getById(memberUser, reportId);
+
+      expect(mockPrismaFindFirst).toHaveBeenCalledWith({
+        where: {
+          id: reportId,
+          companyId: 'company-1',
+          deletedAt: null,
+        },
+        include: expect.objectContaining({
+          attachments: expect.objectContaining({
+            where: {
+              fileObject: {
+                companyId: 'company-1',
+                deletedAt: null,
+              },
+            },
+          }),
+        }),
+      });
+    });
+
+    it('should include attachments when they exist', async () => {
+      mockPrismaFindFirst.mockResolvedValue(mockReportWithAttachments);
+      mockMembershipIsProjectMember.mockResolvedValue(true);
+
+      const result = await service.getById(memberUser, reportId);
+
+      expect(result.attachments).toHaveLength(1);
+      expect(result.attachments[0]).toEqual({
+        id: 'file-1',
+        original_filename: 'photo.jpg',
+        mime_type: 'image/jpeg',
+        size_bytes: 123456,
+      });
+    });
+  });
+
+  describe('updateDraft', () => {
+    const reportId = 'report-1';
+    const updateDto = {
+      work_completed_text: 'Updated work completed',
+      issues_delays_text: 'Some delays',
+      hours_worked_total: 9,
+    };
+
+    const mockDraftReport = {
+      id: 'report-1',
+      projectId: 'project-1',
+      status: DailyReportStatus.DRAFT,
+    };
+
+    const mockSubmittedReport = {
+      id: 'report-1',
+      projectId: 'project-1',
+      status: DailyReportStatus.SUBMITTED,
+    };
+
+    const mockUpdatedReport = {
+      id: 'report-1',
+      projectId: 'project-1',
+      reportDate: new Date('2026-01-29'),
+      status: DailyReportStatus.DRAFT,
+      workCompletedText: 'Updated work completed',
+      issuesDelaysText: 'Some delays',
+      notesText: null,
+      weatherObserved: null,
+      hoursWorkedTotal: 9,
+      submittedAt: null,
+      updatedAt: new Date('2026-01-29T16:00:00Z'),
+      createdBy: {
+        id: 'user-1',
+        fullName: 'John Doe',
+      },
+      attachments: [],
+    };
+
+    it('should allow project member to update draft', async () => {
+      mockPrismaFindFirst.mockResolvedValue(mockDraftReport);
+      mockMembershipIsProjectMember.mockResolvedValue(true);
+      mockPrismaUpdate.mockResolvedValue(mockUpdatedReport);
+
+      const result = await service.updateDraft(memberUser, reportId, updateDto);
+
+      expect(result.work_completed_text).toBe('Updated work completed');
+      expect(result.issues_delays_text).toBe('Some delays');
+      expect(result.hours_worked_total).toBe(9);
+
+      expect(mockPrismaUpdate).toHaveBeenCalledWith({
+        where: {
+          id: reportId,
+          companyId: 'company-1',
+          deletedAt: null,
+        },
+        data: {
+          workCompletedText: 'Updated work completed',
+          issuesDelaysText: 'Some delays',
+          hoursWorkedTotal: 9,
+        },
+        include: expect.any(Object),
+      });
+    });
+
+    it('should deny non-member from updating draft', async () => {
+      mockPrismaFindFirst.mockResolvedValue(mockDraftReport);
+      mockMembershipIsProjectMember.mockResolvedValue(false);
+
+      await expect(service.updateDraft(memberUser, reportId, updateDto)).rejects.toThrow(
+        ForbiddenException,
+      );
+      await expect(service.updateDraft(memberUser, reportId, updateDto)).rejects.toThrow(
+        'Not a project member',
+      );
+    });
+
+    it('should throw NotFoundException if report does not exist', async () => {
+      mockPrismaFindFirst.mockResolvedValue(null);
+
+      await expect(service.updateDraft(memberUser, reportId, updateDto)).rejects.toThrow(
+        NotFoundException,
+      );
+      await expect(service.updateDraft(memberUser, reportId, updateDto)).rejects.toThrow(
+        'Daily report not found',
+      );
+    });
+
+    it('should throw ConflictException when updating submitted report', async () => {
+      mockPrismaFindFirst.mockResolvedValue(mockSubmittedReport);
+      mockMembershipIsProjectMember.mockResolvedValue(true);
+
+      await expect(service.updateDraft(memberUser, reportId, updateDto)).rejects.toThrow(
+        ConflictException,
+      );
+      await expect(service.updateDraft(memberUser, reportId, updateDto)).rejects.toThrow(
+        'Cannot edit submitted report',
+      );
+    });
+
+    it('should scope query by companyId and exclude deleted reports', async () => {
+      mockPrismaFindFirst.mockResolvedValue(mockDraftReport);
+      mockMembershipIsProjectMember.mockResolvedValue(true);
+      mockPrismaUpdate.mockResolvedValue(mockUpdatedReport);
+
+      await service.updateDraft(memberUser, reportId, updateDto);
+
+      expect(mockPrismaFindFirst).toHaveBeenCalledWith({
+        where: {
+          id: reportId,
+          companyId: 'company-1',
+          deletedAt: null,
+        },
+      });
+    });
+
+    it('should not write audit event for draft updates', async () => {
+      mockPrismaFindFirst.mockResolvedValue(mockDraftReport);
+      mockMembershipIsProjectMember.mockResolvedValue(true);
+      mockPrismaUpdate.mockResolvedValue(mockUpdatedReport);
+
+      await service.updateDraft(memberUser, reportId, updateDto);
+
+      expect(mockAuditRecord).not.toHaveBeenCalled();
+    });
+
+    it('should handle partial updates (only provided fields)', async () => {
+      const partialDto = {
+        work_completed_text: 'Only this field',
+      };
+
+      mockPrismaFindFirst.mockResolvedValue(mockDraftReport);
+      mockMembershipIsProjectMember.mockResolvedValue(true);
+      mockPrismaUpdate.mockResolvedValue(mockUpdatedReport);
+
+      await service.updateDraft(memberUser, reportId, partialDto);
+
+      expect(mockPrismaUpdate).toHaveBeenCalledWith({
+        where: {
+          id: reportId,
+          companyId: 'company-1',
+          deletedAt: null,
+        },
+        data: {
+          workCompletedText: 'Only this field',
+        },
+        include: expect.any(Object),
+      });
+    });
+  });
+
+  describe('submitReport', () => {
+    const reportId = 'report-1';
+
+    const mockDraftReportWithContent = {
+      id: 'report-1',
+      projectId: 'project-1',
+      reportDate: new Date('2026-01-29'),
+      status: DailyReportStatus.DRAFT,
+      workCompletedText: 'Completed framing work',
+    };
+
+    const mockDraftReportEmpty = {
+      id: 'report-1',
+      projectId: 'project-1',
+      reportDate: new Date('2026-01-29'),
+      status: DailyReportStatus.DRAFT,
+      workCompletedText: '   ',
+    };
+
+    const mockSubmittedReport = {
+      id: 'report-1',
+      projectId: 'project-1',
+      reportDate: new Date('2026-01-29'),
+      status: DailyReportStatus.SUBMITTED,
+      workCompletedText: 'Completed framing work',
+    };
+
+    const mockSubmittedReportFull = {
+      id: 'report-1',
+      projectId: 'project-1',
+      reportDate: new Date('2026-01-29'),
+      status: DailyReportStatus.SUBMITTED,
+      workCompletedText: 'Completed framing work',
+      issuesDelaysText: null,
+      notesText: null,
+      weatherObserved: null,
+      hoursWorkedTotal: 8,
+      submittedAt: new Date('2026-01-29T18:00:00Z'),
+      updatedAt: new Date('2026-01-29T18:00:00Z'),
+      createdBy: {
+        id: 'user-1',
+        fullName: 'John Doe',
+      },
+      attachments: [],
+    };
+
+    it('should allow project member to submit draft with valid content', async () => {
+      mockPrismaFindFirst.mockResolvedValue(mockDraftReportWithContent);
+      mockMembershipIsProjectMember.mockResolvedValue(true);
+      mockPrismaUpdate.mockResolvedValue(mockSubmittedReportFull);
+
+      const result = await service.submitReport(memberUser, reportId);
+
+      expect(result.status).toBe(DailyReportStatus.SUBMITTED);
+      expect(result.submitted_at).toBeTruthy();
+
+      expect(mockPrismaUpdate).toHaveBeenCalledWith({
+        where: {
+          id: reportId,
+          companyId: 'company-1',
+          deletedAt: null,
+        },
+        data: {
+          status: DailyReportStatus.SUBMITTED,
+          submittedAt: expect.any(Date),
+        },
+        include: expect.any(Object),
+      });
+
+      expect(mockAuditRecord).toHaveBeenCalledWith({
+        companyId: 'company-1',
+        actorUserId: 'user-1',
+        projectId: 'project-1',
+        entityType: 'DAILY_REPORT',
+        entityId: reportId,
+        action: 'SUBMITTED',
+        metadata: {
+          projectId: 'project-1',
+          reportId,
+          reportDate: '2026-01-29',
+        },
+      });
+    });
+
+    it('should deny non-member from submitting report', async () => {
+      mockPrismaFindFirst.mockResolvedValue(mockDraftReportWithContent);
+      mockMembershipIsProjectMember.mockResolvedValue(false);
+
+      await expect(service.submitReport(memberUser, reportId)).rejects.toThrow(ForbiddenException);
+      await expect(service.submitReport(memberUser, reportId)).rejects.toThrow(
+        'Not a project member',
+      );
+
+      expect(mockPrismaUpdate).not.toHaveBeenCalled();
+      expect(mockAuditRecord).not.toHaveBeenCalled();
+    });
+
+    it('should throw NotFoundException if report does not exist', async () => {
+      mockPrismaFindFirst.mockResolvedValue(null);
+
+      await expect(service.submitReport(memberUser, reportId)).rejects.toThrow(NotFoundException);
+      await expect(service.submitReport(memberUser, reportId)).rejects.toThrow(
+        'Daily report not found',
+      );
+    });
+
+    it('should throw ConflictException when submitting already submitted report', async () => {
+      mockPrismaFindFirst.mockResolvedValue(mockSubmittedReport);
+      mockMembershipIsProjectMember.mockResolvedValue(true);
+
+      await expect(service.submitReport(memberUser, reportId)).rejects.toThrow(ConflictException);
+      await expect(service.submitReport(memberUser, reportId)).rejects.toThrow(
+        'Report is already submitted',
+      );
+
+      expect(mockPrismaUpdate).not.toHaveBeenCalled();
+      expect(mockAuditRecord).not.toHaveBeenCalled();
+    });
+
+    it('should throw BadRequestException when work_completed_text is empty', async () => {
+      mockPrismaFindFirst.mockResolvedValue(mockDraftReportEmpty);
+      mockMembershipIsProjectMember.mockResolvedValue(true);
+
+      await expect(service.submitReport(memberUser, reportId)).rejects.toThrow(BadRequestException);
+      await expect(service.submitReport(memberUser, reportId)).rejects.toThrow(
+        'work_completed_text must be non-empty to submit',
+      );
+
+      expect(mockPrismaUpdate).not.toHaveBeenCalled();
+      expect(mockAuditRecord).not.toHaveBeenCalled();
+    });
+
+    it('should scope query by companyId and exclude deleted reports', async () => {
+      mockPrismaFindFirst.mockResolvedValue(mockDraftReportWithContent);
+      mockMembershipIsProjectMember.mockResolvedValue(true);
+      mockPrismaUpdate.mockResolvedValue(mockSubmittedReportFull);
+
+      await service.submitReport(memberUser, reportId);
+
+      expect(mockPrismaFindFirst).toHaveBeenCalledWith({
+        where: {
+          id: reportId,
+          companyId: 'company-1',
+          deletedAt: null,
+        },
+      });
+    });
+
+    it('should write audit event only on successful submit', async () => {
+      mockPrismaFindFirst.mockResolvedValue(mockDraftReportWithContent);
+      mockMembershipIsProjectMember.mockResolvedValue(true);
+      mockPrismaUpdate.mockResolvedValue(mockSubmittedReportFull);
+
+      await service.submitReport(memberUser, reportId);
+
+      expect(mockAuditRecord).toHaveBeenCalledTimes(1);
+      expect(mockAuditRecord).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: 'SUBMITTED',
+          entityType: 'DAILY_REPORT',
+        }),
+      );
     });
   });
 });
