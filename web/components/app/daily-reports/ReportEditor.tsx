@@ -8,10 +8,8 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { DailyReportDetail } from "@/lib/api/endpoints/dailyReports";
 
 interface ReportEditorProps {
-  report: DailyReportDetail;
   isReadOnly: boolean;
   formData: {
     work_completed_text: string;
@@ -23,7 +21,6 @@ interface ReportEditorProps {
 }
 
 export function ReportEditor({
-  report,
   isReadOnly,
   formData,
   onFormChange,
@@ -113,36 +110,6 @@ export function ReportEditor({
           </div>
         </CardContent>
       </Card>
-
-      {report.attachments && report.attachments.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Attachments</CardTitle>
-            <CardDescription>
-              {report.attachments.length} file(s) attached
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {report.attachments.map((attachment) => (
-                <div
-                  key={attachment.id}
-                  className="flex items-center justify-between p-2 border rounded"
-                >
-                  <div>
-                    <p className="text-sm font-medium">
-                      {attachment.original_filename}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {(attachment.size_bytes / 1024 / 1024).toFixed(2)} MB
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 }

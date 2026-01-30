@@ -3,6 +3,7 @@ import {
   Get,
   Patch,
   Post,
+  Delete,
   Param,
   Body,
   UseGuards,
@@ -98,6 +99,28 @@ export class DailyReportController {
       },
       reportId,
       dto,
+    );
+
+    return {
+      data: result,
+      error: null,
+    };
+  }
+
+  @Delete(':reportId/attachments/:fileObjectId')
+  async deleteAttachment(
+    @CurrentUser() user: AuthUser,
+    @Param('reportId', ParseUUIDPipe) reportId: string,
+    @Param('fileObjectId', ParseUUIDPipe) fileObjectId: string,
+  ): Promise<ApiResponse<{ ok: boolean }>> {
+    const result = await this.dailyReportsService.deleteAttachment(
+      {
+        userId: user.userId,
+        companyId: user.companyId,
+        role: user.role,
+      },
+      reportId,
+      fileObjectId,
     );
 
     return {

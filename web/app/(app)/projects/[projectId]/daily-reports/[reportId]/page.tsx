@@ -9,6 +9,7 @@ import {
 import { useProject } from "@/lib/queries/projects.queries";
 import { ReportHeader } from "@/components/app/daily-reports/ReportHeader";
 import { ReportEditor } from "@/components/app/daily-reports/ReportEditor";
+import { AttachmentsSection } from "@/components/app/daily-reports/AttachmentsSection";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Card,
@@ -249,10 +250,16 @@ export default function DailyReportDetailPage({
       )}
 
       <ReportEditor
-        report={report}
         isReadOnly={isReadOnly}
         formData={formData}
         onFormChange={handleFormChange}
+      />
+
+      <AttachmentsSection
+        reportId={reportId}
+        projectId={projectId}
+        attachments={report.attachments || []}
+        isReadOnly={isReadOnly}
       />
     </div>
   );

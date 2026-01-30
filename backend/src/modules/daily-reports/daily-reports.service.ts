@@ -599,6 +599,64 @@ export class DailyReportsService {
     return { ok: true };
   }
 
+  async deleteAttachment(
+    user: PolicyUser,
+    reportId: string,
+    fileObjectId: string,
+  ): Promise<{ ok: boolean }> {
+    const report = await this.prisma.dailyReport.findFirst({
+      where: {
+        id: reportId,
+        companyId: user.companyId,
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        status: true,
+        projectId: true,
+        companyId: true,
+      },
+    });
+
+    if (!report) {
+      throw new NotFoundException('Daily report not found');
+    }
+
+    const isMember = await this.membershipService.isProjectMember({
+      userId: user.userId,
+      companyId: user.companyId,
+      projectId: report.projectId,
+    });
+
+    if (!isMember) {
+      throw new ForbiddenException('Only project members can delete attachments');
+    }
+
+    if (report.status !== 'DRAFT') {
+      throw new ConflictException('Cannot delete attachments from submitted reports');
+    }
+
+    const attachment = await this.prisma.dailyReportAttachment.findFirst({
+      where: {
+        dailyReportId: reportId,
+        fileObjectId,
+        companyId: user.companyId,
+      },
+    });
+
+    if (!attachment) {
+      return { ok: true };
+    }
+
+    await this.prisma.dailyReportAttachment.delete({
+      where: {
+        id: attachment.id,
+      },
+    });
+
+    return { ok: true };
+  }
+
   private formatDateAsYYYYMMDD(date: Date): string {
     const year = date.getUTCFullYear();
     const month = String(date.getUTCMonth() + 1).padStart(2, '0');
