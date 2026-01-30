@@ -1,10 +1,22 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { listProjects, createProject } from "../api/endpoints/projects";
+import {
+  listProjects,
+  createProject,
+  getProjectFromListFallback,
+} from "../api/endpoints/projects";
 
 export function useProjectsList() {
   return useQuery({
     queryKey: ["projects", "list"],
     queryFn: listProjects,
+  });
+}
+
+export function useProject(projectId: string) {
+  return useQuery({
+    queryKey: ["projects", projectId],
+    queryFn: () => getProjectFromListFallback(projectId),
+    enabled: !!projectId,
   });
 }
 
