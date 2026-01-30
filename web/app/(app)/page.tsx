@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useDashboard } from "@/lib/queries/dashboard.queries";
-import { HealthCheck } from "@/components/app/HealthCheck";
 import {
   Card,
   CardContent,
@@ -212,8 +211,6 @@ export default function DashboardPage() {
             )}
           </CardContent>
         </Card>
-
-        <HealthCheck />
       </div>
 
       {hasProjects && dashboard.recent_projects.length > 0 && (
