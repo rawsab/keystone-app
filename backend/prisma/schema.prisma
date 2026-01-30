@@ -1,0 +1,218 @@
+// Keystone Stage 1 Database Schema
+// Source of truth: docs/04_DATA_MODEL.md
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================================================================
+// COMPANIES (Tenant)
+// ============================================================================
+
+model Company {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  timezone  String
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  users                   User[]
+  projects                Project[]
+  projectMembers          ProjectMember[]
+  dailyReports            DailyReport[]
+  fileObjects             FileObject[]
+  dailyReportAttachments  DailyReportAttachment[]
+  auditEvents             AuditEvent[]
+
+  @@map("companies")
+}
+
+// ============================================================================
+// USERS
+// ============================================================================
+
+model User {
+  id           String    @id @default(uuid()) @db.Uuid
+  companyId    String    @map("company_id") @db.Uuid
+  email        String    @db.Citext
+  fullName     String    @map("full_name")
+  role         String
+  passwordHash String?   @map("password_hash")
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt    DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  company                 Company                 @relation(fields: [companyId], references: [id])
+  projectMembers          ProjectMember[]
+  createdDailyReports     DailyReport[]
+  uploadedFiles           FileObject[]
+  auditEvents             AuditEvent[]
+
+  @@unique([companyId, email])
+  @@index([companyId])
+  @@index([companyId, role])
+  @@map("users")
+}
+
+// ============================================================================
+// PROJECTS
+// ============================================================================
+
+model Project {
+  id        String    @id @default(uuid()) @db.Uuid
+  companyId String    @map("company_id") @db.Uuid
+  name      String
+  location  String?
+  status    String    @default("ACTIVE")
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  company         Company         @relation(fields: [companyId], references: [id])
+  members         ProjectMember[]
+  dailyReports    DailyReport[]
+  fileObjects     FileObject[]
+  auditEvents     AuditEvent[]
+
+  @@index([companyId, status])
+  @@index([companyId, updatedAt(sort: Desc)])
+  @@map("projects")
+}
+
+// ============================================================================
+// PROJECT MEMBERS
+// ============================================================================
+
+model ProjectMember {
+  id          String   @id @default(uuid()) @db.Uuid
+  companyId   String   @map("company_id") @db.Uuid
+  projectId   String   @map("project_id") @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  projectRole String   @map("project_role")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  company Company @relation(fields: [companyId], references: [id])
+  project Project @relation(fields: [projectId], references: [id])
+  user    User    @relation(fields: [userId], references: [id])
+
+  @@unique([companyId, projectId, userId])
+  @@index([companyId, userId])
+  @@index([companyId, projectId])
+  @@map("project_members")
+}
+
+// ============================================================================
+// DAILY REPORTS
+// ============================================================================
+
+model DailyReport {
+  id                String    @id @default(uuid()) @db.Uuid
+  companyId         String    @map("company_id") @db.Uuid
+  projectId         String    @map("project_id") @db.Uuid
+  reportDate        DateTime  @map("report_date") @db.Date
+  status            String    @default("DRAFT")
+  weatherObserved   Json?     @map("weather_observed") @db.JsonB
+  workCompletedText String    @default("") @map("work_completed_text")
+  issuesDelaysText  String?   @map("issues_delays_text")
+  notesText         String?   @map("notes_text")
+  hoursWorkedTotal  Decimal?  @map("hours_worked_total") @db.Decimal(6, 2)
+  createdByUserId   String    @map("created_by_user_id") @db.Uuid
+  submittedAt       DateTime? @map("submitted_at") @db.Timestamptz(6)
+  approvedAt        DateTime? @map("approved_at") @db.Timestamptz(6)
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt         DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  company     Company                 @relation(fields: [companyId], references: [id])
+  project     Project                 @relation(fields: [projectId], references: [id])
+  createdBy   User                    @relation(fields: [createdByUserId], references: [id])
+  attachments DailyReportAttachment[]
+
+  @@unique([companyId, projectId, reportDate])
+  @@index([companyId, projectId, reportDate(sort: Desc)])
+  @@index([companyId, projectId, status])
+  @@index([companyId, createdByUserId])
+  @@index([companyId, projectId, createdAt(sort: Desc)])
+  @@map("daily_reports")
+}
+
+// ============================================================================
+// FILE OBJECTS
+// ============================================================================
+
+model FileObject {
+  id               String    @id @default(uuid()) @db.Uuid
+  companyId        String    @map("company_id") @db.Uuid
+  projectId        String?   @map("project_id") @db.Uuid
+  storageProvider  String    @default("S3") @map("storage_provider")
+  bucket           String
+  objectKey        String    @map("object_key")
+  originalFilename String    @map("original_filename")
+  mimeType         String    @map("mime_type")
+  sizeBytes        BigInt    @map("size_bytes")
+  checksum         String?
+  uploadedByUserId String    @map("uploaded_by_user_id") @db.Uuid
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  deletedAt        DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  company     Company                 @relation(fields: [companyId], references: [id])
+  project     Project?                @relation(fields: [projectId], references: [id])
+  uploadedBy  User                    @relation(fields: [uploadedByUserId], references: [id])
+  attachments DailyReportAttachment[]
+
+  @@unique([bucket, objectKey])
+  @@index([companyId, projectId, createdAt(sort: Desc)])
+  @@index([companyId, uploadedByUserId])
+  @@index([companyId, mimeType])
+  @@map("file_objects")
+}
+
+// ============================================================================
+// DAILY REPORT ATTACHMENTS
+// ============================================================================
+
+model DailyReportAttachment {
+  id            String   @id @default(uuid()) @db.Uuid
+  companyId     String   @map("company_id") @db.Uuid
+  dailyReportId String   @map("daily_report_id") @db.Uuid
+  fileObjectId  String   @map("file_object_id") @db.Uuid
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  company     Company     @relation(fields: [companyId], references: [id])
+  dailyReport DailyReport @relation(fields: [dailyReportId], references: [id])
+  fileObject  FileObject  @relation(fields: [fileObjectId], references: [id])
+
+  @@unique([companyId, dailyReportId, fileObjectId])
+  @@index([companyId, dailyReportId])
+  @@index([companyId, fileObjectId])
+  @@map("daily_report_attachments")
+}
+
+// ============================================================================
+// AUDIT EVENTS
+// ============================================================================
+
+model AuditEvent {
+  id           String   @id @default(uuid()) @db.Uuid
+  companyId    String   @map("company_id") @db.Uuid
+  actorUserId  String   @map("actor_user_id") @db.Uuid
+  projectId    String?  @map("project_id") @db.Uuid
+  entityType   String   @map("entity_type")
+  entityId     String   @map("entity_id") @db.Uuid
+  action       String
+  metadataJson Json?    @map("metadata_json") @db.JsonB
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  company Company  @relation(fields: [companyId], references: [id])
+  actor   User     @relation(fields: [actorUserId], references: [id])
+  project Project? @relation(fields: [projectId], references: [id])
+
+  @@index([companyId, createdAt(sort: Desc)])
+  @@index([companyId, projectId, createdAt(sort: Desc)])
+  @@index([companyId, entityType, entityId, createdAt(sort: Desc)])
+  @@index([companyId, actorUserId, createdAt(sort: Desc)])
+  @@map("audit_events")
+}

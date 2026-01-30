@@ -44,6 +44,24 @@ npm run build
 npm start
 ```
 
+### Database
+
+```bash
+# Generate Prisma Client
+npm run prisma:generate
+
+# Run migrations
+npm run prisma:migrate
+
+# Open Prisma Studio (database GUI)
+npm run prisma:studio
+
+# Reset database (WARNING: deletes all data)
+npm run prisma:reset
+```
+
+See [prisma/README.md](./prisma/README.md) for detailed database documentation.
+
 ### Code Quality
 
 ```bash
@@ -69,10 +87,17 @@ src/
     config.module.ts  # Config module
     env.schema.ts     # Environment variable schema
     env.service.ts    # Type-safe config service
+  infra/
+    db/               # Database infrastructure
+      prisma.module.ts  # Prisma module
+      prisma.service.ts # Prisma service
   modules/
     health/           # Health check module
   app.module.ts       # Root application module
   main.ts            # Application entry point
+prisma/
+  migrations/         # Database migrations
+  schema.prisma       # Database schema
 ```
 
 ## API Conventions

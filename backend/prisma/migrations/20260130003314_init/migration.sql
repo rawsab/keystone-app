@@ -1,0 +1,2 @@
+-- RenameIndex
+ALTER INDEX "daily_report_attachments_company_id_daily_report_id_file_key" RENAME TO "daily_report_attachments_company_id_daily_report_id_file_ob_key";
