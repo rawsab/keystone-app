@@ -1,4 +1,5 @@
 import { ApiResponse } from "./types";
+import { getToken } from "./auth";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3000/api/v1";
@@ -17,12 +18,22 @@ export class ApiClient {
     try {
       const url = `${this.baseUrl}${endpoint}`;
 
+      const token = getToken();
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+
+      if (options.headers) {
+        Object.assign(headers, options.headers);
+      }
+
       const response = await fetch(url, {
         ...options,
-        headers: {
-          "Content-Type": "application/json",
-          ...options.headers,
-        },
+        headers,
       });
 
       const data = await response.json();
