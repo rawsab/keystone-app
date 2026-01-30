@@ -7,6 +7,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
 import { ProjectsModule } from './modules/projects/projects.module';
 import { FilesModule } from './modules/files/files.module';
+import { DailyReportsModule } from './modules/daily-reports/daily-reports.module';
 import { HealthModule } from './modules/health/health.module';
 
 /**
@@ -22,6 +23,7 @@ import { HealthModule } from './modules/health/health.module';
     UsersModule,
     ProjectsModule,
     FilesModule,
+    DailyReportsModule,
     HealthModule,
   ],
 })
