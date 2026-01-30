@@ -45,3 +45,5 @@ jobs:
 
       - name: Run backend CI
         run: npm run ci:backend
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/keystone_test
