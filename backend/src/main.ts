@@ -2,6 +2,7 @@ import 'dotenv/config';
 import { NestFactory } from '@nestjs/core';
 import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
 import { ValidationPipe } from '@nestjs/common';
+import fastifyCors from '@fastify/cors';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { EnvService } from './config/env.service';
@@ -10,10 +11,12 @@ import { EnvService } from './config/env.service';
  * Bootstrap the NestJS application with Fastify adapter
  */
 async function bootstrap() {
-  const app = await NestFactory.create<NestFastifyApplication>(
-    AppModule,
-    new FastifyAdapter(),
-  );
+  const app = await NestFactory.create<NestFastifyApplication>(AppModule, new FastifyAdapter());
+
+  await app.register(fastifyCors, {
+    origin: ['http://localhost:3001', 'http://localhost:3000'],
+    credentials: true,
+  });
 
   app.useGlobalPipes(
     new ValidationPipe({
