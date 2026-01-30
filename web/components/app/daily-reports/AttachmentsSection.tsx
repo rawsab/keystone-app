@@ -66,9 +66,18 @@ export function AttachmentsSection({
         }
       },
       onError: (error) => {
+        const errorMessage =
+          error instanceof Error ? error.message : "Unknown error";
+        const isConfigError =
+          errorMessage.includes("S3") ||
+          errorMessage.includes("AWS") ||
+          errorMessage.includes("storage");
+
         toast({
           title: "Upload failed",
-          description: error instanceof Error ? error.message : "Unknown error",
+          description: isConfigError
+            ? "File storage is not configured. Contact your administrator to enable uploads."
+            : errorMessage,
           variant: "destructive",
         });
         if (fileInputRef.current) {
