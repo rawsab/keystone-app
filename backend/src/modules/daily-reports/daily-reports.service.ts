@@ -13,6 +13,7 @@ import { PolicyUser, DailyReportStatus } from '../../security/rbac';
 import { DailyReportListItemDto } from './dto/daily-report-list-item.dto';
 import { CreateDailyReportDto } from './dto/create-daily-report.dto';
 import { UpdateDailyReportDto } from './dto/update-daily-report.dto';
+import { AttachFileDto } from './dto/attach-file.dto';
 import { DailyReportResponseDto } from './dto/daily-report-response.dto';
 
 @Injectable()
@@ -510,6 +511,92 @@ export class DailyReportsService {
     });
 
     return this.mapToResponseDto(submittedReport);
+  }
+
+  async attachFile(
+    user: PolicyUser,
+    reportId: string,
+    dto: AttachFileDto,
+  ): Promise<{ ok: boolean }> {
+    const report = await this.prisma.dailyReport.findFirst({
+      where: {
+        id: reportId,
+        companyId: user.companyId,
+        deletedAt: null,
+      },
+    });
+
+    if (!report) {
+      throw new NotFoundException('Daily report not found');
+    }
+
+    const isMember = await this.membershipService.isProjectMember({
+      userId: user.userId,
+      companyId: user.companyId,
+      projectId: report.projectId,
+    });
+
+    if (!isMember) {
+      throw new ForbiddenException('Not a project member');
+    }
+
+    const fileObject = await this.prisma.fileObject.findFirst({
+      where: {
+        id: dto.file_object_id,
+        companyId: user.companyId,
+        deletedAt: null,
+      },
+    });
+
+    if (!fileObject) {
+      throw new NotFoundException('File not found');
+    }
+
+    if (fileObject.projectId !== report.projectId) {
+      throw new ForbiddenException('File must belong to the same project as the report');
+    }
+
+    const existingAttachment = await this.prisma.dailyReportAttachment.findFirst({
+      where: {
+        companyId: user.companyId,
+        dailyReportId: reportId,
+        fileObjectId: dto.file_object_id,
+      },
+    });
+
+    if (existingAttachment) {
+      return { ok: true };
+    }
+
+    try {
+      await this.prisma.dailyReportAttachment.create({
+        data: {
+          companyId: user.companyId,
+          dailyReportId: reportId,
+          fileObjectId: dto.file_object_id,
+        },
+      });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        return { ok: true };
+      }
+      throw error;
+    }
+
+    await this.auditService.record({
+      companyId: user.companyId,
+      actorUserId: user.userId,
+      projectId: report.projectId,
+      entityType: 'DAILY_REPORT',
+      entityId: reportId,
+      action: 'FILE_ATTACHED',
+      metadata: {
+        reportId,
+        fileObjectId: dto.file_object_id,
+      },
+    });
+
+    return { ok: true };
   }
 
   private formatDateAsYYYYMMDD(date: Date): string {

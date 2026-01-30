@@ -18,6 +18,9 @@ describe('DailyReportsService', () => {
   let mockPrismaFindFirst: jest.Mock;
   let mockPrismaCreate: jest.Mock;
   let mockPrismaUpdate: jest.Mock;
+  let mockPrismaFileObjectFindFirst: jest.Mock;
+  let mockPrismaAttachmentFindFirst: jest.Mock;
+  let mockPrismaAttachmentCreate: jest.Mock;
   let mockMembershipVerifyProjectExists: jest.Mock;
   let mockMembershipIsProjectMember: jest.Mock;
   let mockAuditRecord: jest.Mock;
@@ -35,6 +38,9 @@ describe('DailyReportsService', () => {
     mockPrismaFindFirst = jest.fn();
     mockPrismaCreate = jest.fn();
     mockPrismaUpdate = jest.fn();
+    mockPrismaFileObjectFindFirst = jest.fn();
+    mockPrismaAttachmentFindFirst = jest.fn();
+    mockPrismaAttachmentCreate = jest.fn();
     mockMembershipVerifyProjectExists = jest.fn();
     mockMembershipIsProjectMember = jest.fn();
     mockAuditRecord = jest.fn();
@@ -45,6 +51,13 @@ describe('DailyReportsService', () => {
         findFirst: mockPrismaFindFirst,
         create: mockPrismaCreate,
         update: mockPrismaUpdate,
+      },
+      fileObject: {
+        findFirst: mockPrismaFileObjectFindFirst,
+      },
+      dailyReportAttachment: {
+        findFirst: mockPrismaAttachmentFindFirst,
+        create: mockPrismaAttachmentCreate,
       },
     };
 
@@ -861,6 +874,203 @@ describe('DailyReportsService', () => {
           entityType: 'DAILY_REPORT',
         }),
       );
+    });
+  });
+
+  describe('attachFile', () => {
+    const reportId = 'report-1';
+    const fileObjectId = 'file-1';
+    const dto = { file_object_id: fileObjectId };
+
+    const mockReport = {
+      id: 'report-1',
+      projectId: 'project-1',
+    };
+
+    const mockFileObject = {
+      id: 'file-1',
+      projectId: 'project-1',
+    };
+
+    const mockFileObjectDifferentProject = {
+      id: 'file-1',
+      projectId: 'project-2',
+    };
+
+    it('should allow project member to attach file from same project', async () => {
+      mockPrismaFindFirst.mockResolvedValue(mockReport);
+      mockMembershipIsProjectMember.mockResolvedValue(true);
+      mockPrismaFileObjectFindFirst.mockResolvedValue(mockFileObject);
+      mockPrismaAttachmentFindFirst.mockResolvedValue(null);
+
+      const result = await service.attachFile(memberUser, reportId, dto);
+
+      expect(result).toEqual({ ok: true });
+
+      expect(mockPrismaAttachmentCreate).toHaveBeenCalledWith({
+        data: {
+          companyId: 'company-1',
+          dailyReportId: reportId,
+          fileObjectId: fileObjectId,
+        },
+      });
+
+      expect(mockAuditRecord).toHaveBeenCalledWith({
+        companyId: 'company-1',
+        actorUserId: 'user-1',
+        projectId: 'project-1',
+        entityType: 'DAILY_REPORT',
+        entityId: reportId,
+        action: 'FILE_ATTACHED',
+        metadata: {
+          reportId,
+          fileObjectId,
+        },
+      });
+    });
+
+    it('should deny non-member from attaching file', async () => {
+      mockPrismaFindFirst.mockResolvedValue(mockReport);
+      mockMembershipIsProjectMember.mockResolvedValue(false);
+
+      await expect(service.attachFile(memberUser, reportId, dto)).rejects.toThrow(
+        ForbiddenException,
+      );
+      await expect(service.attachFile(memberUser, reportId, dto)).rejects.toThrow(
+        'Not a project member',
+      );
+
+      expect(mockPrismaAttachmentCreate).not.toHaveBeenCalled();
+      expect(mockAuditRecord).not.toHaveBeenCalled();
+    });
+
+    it('should throw NotFoundException if report does not exist', async () => {
+      mockPrismaFindFirst.mockResolvedValue(null);
+
+      await expect(service.attachFile(memberUser, reportId, dto)).rejects.toThrow(
+        NotFoundException,
+      );
+      await expect(service.attachFile(memberUser, reportId, dto)).rejects.toThrow(
+        'Daily report not found',
+      );
+    });
+
+    it('should throw NotFoundException if file does not exist', async () => {
+      mockPrismaFindFirst.mockResolvedValue(mockReport);
+      mockMembershipIsProjectMember.mockResolvedValue(true);
+      mockPrismaFileObjectFindFirst.mockResolvedValue(null);
+
+      await expect(service.attachFile(memberUser, reportId, dto)).rejects.toThrow(
+        NotFoundException,
+      );
+      await expect(service.attachFile(memberUser, reportId, dto)).rejects.toThrow('File not found');
+    });
+
+    it('should throw ForbiddenException if file is from different project', async () => {
+      mockPrismaFindFirst.mockResolvedValue(mockReport);
+      mockMembershipIsProjectMember.mockResolvedValue(true);
+      mockPrismaFileObjectFindFirst.mockResolvedValue(mockFileObjectDifferentProject);
+
+      await expect(service.attachFile(memberUser, reportId, dto)).rejects.toThrow(
+        ForbiddenException,
+      );
+      await expect(service.attachFile(memberUser, reportId, dto)).rejects.toThrow(
+        'File must belong to the same project as the report',
+      );
+
+      expect(mockPrismaAttachmentCreate).not.toHaveBeenCalled();
+      expect(mockAuditRecord).not.toHaveBeenCalled();
+    });
+
+    it('should be idempotent when attaching same file twice', async () => {
+      const existingAttachment = {
+        id: 'attachment-1',
+        dailyReportId: reportId,
+        fileObjectId: fileObjectId,
+      };
+
+      mockPrismaFindFirst.mockResolvedValue(mockReport);
+      mockMembershipIsProjectMember.mockResolvedValue(true);
+      mockPrismaFileObjectFindFirst.mockResolvedValue(mockFileObject);
+      mockPrismaAttachmentFindFirst.mockResolvedValue(existingAttachment);
+
+      const result = await service.attachFile(memberUser, reportId, dto);
+
+      expect(result).toEqual({ ok: true });
+      expect(mockPrismaAttachmentCreate).not.toHaveBeenCalled();
+      expect(mockAuditRecord).not.toHaveBeenCalled();
+    });
+
+    it('should scope queries by companyId and exclude deleted', async () => {
+      mockPrismaFindFirst.mockResolvedValue(mockReport);
+      mockMembershipIsProjectMember.mockResolvedValue(true);
+      mockPrismaFileObjectFindFirst.mockResolvedValue(mockFileObject);
+      mockPrismaAttachmentFindFirst.mockResolvedValue(null);
+
+      await service.attachFile(memberUser, reportId, dto);
+
+      expect(mockPrismaFindFirst).toHaveBeenCalledWith({
+        where: {
+          id: reportId,
+          companyId: 'company-1',
+          deletedAt: null,
+        },
+      });
+
+      expect(mockPrismaFileObjectFindFirst).toHaveBeenCalledWith({
+        where: {
+          id: fileObjectId,
+          companyId: 'company-1',
+          deletedAt: null,
+        },
+      });
+
+      expect(mockPrismaAttachmentFindFirst).toHaveBeenCalledWith({
+        where: {
+          companyId: 'company-1',
+          dailyReportId: reportId,
+          fileObjectId: fileObjectId,
+        },
+      });
+    });
+
+    it('should write audit event only when new attachment is created', async () => {
+      mockPrismaFindFirst.mockResolvedValue(mockReport);
+      mockMembershipIsProjectMember.mockResolvedValue(true);
+      mockPrismaFileObjectFindFirst.mockResolvedValue(mockFileObject);
+      mockPrismaAttachmentFindFirst.mockResolvedValue(null);
+
+      await service.attachFile(memberUser, reportId, dto);
+
+      expect(mockAuditRecord).toHaveBeenCalledTimes(1);
+      expect(mockAuditRecord).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: 'FILE_ATTACHED',
+          entityType: 'DAILY_REPORT',
+        }),
+      );
+    });
+
+    it('should handle unique constraint conflict (race condition)', async () => {
+      mockPrismaFindFirst.mockResolvedValue(mockReport);
+      mockMembershipIsProjectMember.mockResolvedValue(true);
+      mockPrismaFileObjectFindFirst.mockResolvedValue(mockFileObject);
+      mockPrismaAttachmentFindFirst.mockResolvedValue(null);
+
+      const uniqueConstraintError = new Prisma.PrismaClientKnownRequestError(
+        'Unique constraint failed',
+        {
+          code: 'P2002',
+          clientVersion: '7.3.0',
+        },
+      );
+
+      mockPrismaAttachmentCreate.mockRejectedValue(uniqueConstraintError);
+
+      const result = await service.attachFile(memberUser, reportId, dto);
+
+      expect(result).toEqual({ ok: true });
+      expect(mockAuditRecord).not.toHaveBeenCalled();
     });
   });
 });

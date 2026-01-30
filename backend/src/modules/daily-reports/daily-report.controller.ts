@@ -13,6 +13,7 @@ import { CurrentUser } from '../../security/decorators/current-user.decorator';
 import { AuthUser } from '../../security/jwt.strategy';
 import { DailyReportsService } from './daily-reports.service';
 import { UpdateDailyReportDto } from './dto/update-daily-report.dto';
+import { AttachFileDto } from './dto/attach-file.dto';
 import { DailyReportResponseDto } from './dto/daily-report-response.dto';
 import { ApiResponse } from '../../common/interfaces/api-response.interface';
 
@@ -79,6 +80,28 @@ export class DailyReportController {
 
     return {
       data: report,
+      error: null,
+    };
+  }
+
+  @Post(':reportId/attachments')
+  async attachFile(
+    @CurrentUser() user: AuthUser,
+    @Param('reportId', ParseUUIDPipe) reportId: string,
+    @Body() dto: AttachFileDto,
+  ): Promise<ApiResponse<{ ok: boolean }>> {
+    const result = await this.dailyReportsService.attachFile(
+      {
+        userId: user.userId,
+        companyId: user.companyId,
+        role: user.role,
+      },
+      reportId,
+      dto,
+    );
+
+    return {
+      data: result,
       error: null,
     };
   }
