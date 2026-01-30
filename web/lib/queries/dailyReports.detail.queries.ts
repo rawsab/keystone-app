@@ -47,6 +47,10 @@ export function useSubmitDailyReport(reportId: string, projectId: string) {
       queryClient.invalidateQueries({
         queryKey: ["projects", projectId, "dailyReports"],
       });
+
+      queryClient.invalidateQueries({
+        queryKey: ["dashboard"],
+      });
     },
   });
 }

@@ -27,6 +27,7 @@ export function useCreateProject() {
     mutationFn: createProject,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["projects", "list"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
     },
   });
 }

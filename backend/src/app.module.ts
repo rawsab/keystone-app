@@ -11,6 +11,7 @@ import { FilesModule } from './modules/files/files.module';
 import { DailyReportsModule } from './modules/daily-reports/daily-reports.module';
 import { HealthModule } from './modules/health/health.module';
 import { VersionModule } from './modules/version/version.module';
+import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { VersionHeadersInterceptor } from './common/interceptors/version-headers.interceptor';
 
 /**
@@ -29,6 +30,7 @@ import { VersionHeadersInterceptor } from './common/interceptors/version-headers
     DailyReportsModule,
     HealthModule,
     VersionModule,
+    DashboardModule,
   ],
   providers: [
     {
