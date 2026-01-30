@@ -1,5 +1,6 @@
 "use client";
 
+import { use } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useProject } from "@/lib/queries/projects.queries";
@@ -31,10 +32,10 @@ import { format, formatDistanceToNow } from "date-fns";
 export default function ProjectDashboardPage({
   params,
 }: {
-  params: { projectId: string };
+  params: Promise<{ projectId: string }>;
 }) {
   const router = useRouter();
-  const projectId = params.projectId;
+  const { projectId } = use(params);
 
   const {
     data: projectResponse,

@@ -9,6 +9,7 @@ export interface DailyReportListItem {
     id: string;
     full_name: string;
   };
+  updated_at: string;
 }
 
 export interface DailyReportsFilters {
