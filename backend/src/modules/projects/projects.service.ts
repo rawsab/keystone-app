@@ -1,8 +1,5 @@
-import {
-  Injectable,
-  ForbiddenException,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, ForbiddenException, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../infra/db/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import {
@@ -54,15 +51,12 @@ export class ProjectsService {
     }));
   }
 
-  async createProject(
-    user: PolicyUser,
-    dto: CreateProjectDto,
-  ): Promise<ProjectResponseDto> {
+  async createProject(user: PolicyUser, dto: CreateProjectDto): Promise<ProjectResponseDto> {
     if (!canCreateProject(user)) {
       throw new ForbiddenException('Only OWNER can create projects');
     }
 
-    const result = await this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       const project = await tx.project.create({
         data: {
           companyId: user.companyId,
@@ -102,10 +96,7 @@ export class ProjectsService {
     };
   }
 
-  async archiveProject(
-    user: PolicyUser,
-    projectId: string,
-  ): Promise<ProjectResponseDto> {
+  async archiveProject(user: PolicyUser, projectId: string): Promise<ProjectResponseDto> {
     if (!canArchiveProject(user)) {
       throw new ForbiddenException('Only OWNER can archive projects');
     }

@@ -205,6 +205,7 @@ describe('FilesService', () => {
       mockMembershipVerifyProjectExists.mockResolvedValue(true);
       mockMembershipIsProjectMember.mockResolvedValue(true);
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await expect(service.presignUpload(memberUser, incompleteDto as any)).rejects.toThrow(
         BadRequestException,
       );
