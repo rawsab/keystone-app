@@ -32,7 +32,7 @@ export function AppHeader() {
                   <div className="flex h-8 w-8 items-center justify-center rounded-full bg-secondary">
                     <User className="h-4 w-4" />
                   </div>
-                  <div className="hidden flex-col items-start md:flex">
+                  <div className="hidden items-center gap-2 md:flex">
                     <span className="text-sm font-medium">
                       {user.full_name}
                     </span>
