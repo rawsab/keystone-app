@@ -2,29 +2,26 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { EnvService } from '../config/env.service';
+import { PrismaService } from '../infra/db/prisma.service';
+import { UserRole } from './rbac';
 
-/**
- * JWT payload structure
- */
 export interface JwtPayload {
   sub: string;
   companyId: string;
 }
 
-/**
- * Authenticated user context
- */
 export interface AuthUser {
   userId: string;
   companyId: string;
+  role: UserRole;
 }
 
-/**
- * JWT authentication strategy
- */
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
-  constructor(envService: EnvService) {
+  constructor(
+    envService: EnvService,
+    private readonly prisma: PrismaService,
+  ) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
@@ -37,9 +34,27 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       throw new UnauthorizedException();
     }
 
+    const user = await this.prisma.user.findFirst({
+      where: {
+        id: payload.sub,
+        companyId: payload.companyId,
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        companyId: true,
+        role: true,
+      },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException();
+    }
+
     return {
-      userId: payload.sub,
-      companyId: payload.companyId,
+      userId: user.id,
+      companyId: user.companyId,
+      role: user.role as UserRole,
     };
   }
 }

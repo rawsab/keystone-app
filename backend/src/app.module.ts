@@ -5,6 +5,7 @@ import { RbacModule } from './security/rbac/rbac.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
+import { ProjectsModule } from './modules/projects/projects.module';
 import { HealthModule } from './modules/health/health.module';
 
 /**
@@ -18,6 +19,7 @@ import { HealthModule } from './modules/health/health.module';
     AuditModule,
     AuthModule,
     UsersModule,
+    ProjectsModule,
     HealthModule,
   ],
 })
