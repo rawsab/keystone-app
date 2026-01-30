@@ -1,23 +1,26 @@
 {
   "name": "keystone-app",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "directories": {
-    "doc": "docs"
-  },
+  "version": "0.1.0",
+  "private": true,
+  "description": "Keystone — construction project management platform (work in progress)",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "prepare": "husky",
+    "fmt": "prettier -w .",
+    "fmt:check": "prettier -c .",
+    "backend:lint": "npm --prefix backend run lint",
+    "backend:typecheck": "npm --prefix backend run typecheck",
+    "backend:test": "npm --prefix backend test",
+    "backend:test:e2e": "npm --prefix backend run test:e2e",
+    "backend:build": "npm --prefix backend run build",
+    "ci:backend": "npm run backend:lint && npm run backend:typecheck && npm run backend:test && npm run backend:test:e2e && npm run backend:build"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/rawsab/keystone-app.git"
+  "devDependencies": {
+    "husky": "^9.0.0",
+    "lint-staged": "^15.0.0",
+    "prettier": "^3.2.5"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/rawsab/keystone-app/issues"
-  },
-  "homepage": "https://github.com/rawsab/keystone-app#readme"
+  "lint-staged": {
+    "*.{js,cjs,mjs,ts,tsx,json,md,yml,yaml}": "prettier --write",
+    "backend/**/*.{js,cjs,mjs,ts}": "npm --prefix backend run lint -- --fix"
+  }
 }

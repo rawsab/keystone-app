@@ -20,7 +20,7 @@ export class AuditService {
     action: string;
     metadata?: Record<string, unknown>;
   }): Promise<void> {
-      await this.prisma.auditEvent.create({
+    await this.prisma.auditEvent.create({
       data: {
         companyId: params.companyId,
         actorUserId: params.actorUserId,
@@ -28,6 +28,7 @@ export class AuditService {
         entityType: params.entityType,
         entityId: params.entityId,
         action: params.action,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         metadataJson: params.metadata as any,
       },
     });
