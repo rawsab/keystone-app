@@ -156,12 +156,23 @@ export default function ProjectDashboardPage({
                   </CardDescription>
                 </div>
                 {allReports.length > 0 && (
-                  <Link href={routes.project.reports(projectId)}>
-                    <Button variant="outline" size="sm">
-                      View All Reports
-                      <ExternalLink className="ml-2 h-4 w-4" />
-                    </Button>
-                  </Link>
+                  <div className="flex items-center gap-2">
+                    <Link href={routes.project.reports(projectId)}>
+                      <Button variant="outline" size="sm">
+                        View All Reports
+                        <ExternalLink className="ml-2 h-4 w-4" />
+                      </Button>
+                    </Link>
+                    <CreateDailyReportDialog
+                      projectId={projectId}
+                      trigger={
+                        <Button size="sm">
+                          <Plus className="mr-0 h-4 w-4" />
+                          Create Report
+                        </Button>
+                      }
+                    />
+                  </div>
                 )}
               </div>
             </CardHeader>

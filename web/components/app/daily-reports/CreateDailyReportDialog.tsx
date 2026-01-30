@@ -88,7 +88,7 @@ export function CreateDailyReportDialog({
       <DialogTrigger asChild>
         {trigger || (
           <Button>
-            <Plus className="mr-2 h-4 w-4" />
+            <Plus className="mr-0 h-4 w-4" />
             Create Daily Report
           </Button>
         )}
