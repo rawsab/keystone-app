@@ -70,13 +70,29 @@ describe('ProjectsService', () => {
       const mockProjects = [
         {
           id: 'project-1',
+          projectNumber: 'PRJ-001',
           name: 'Project 1',
+          companyName: 'Test Company',
+          addressLine1: '123 Main St',
+          addressLine2: null,
+          city: 'Toronto',
+          region: 'Ontario',
+          postalCode: 'M5H 2N2',
+          country: 'Canada',
           status: 'ACTIVE',
           updatedAt: new Date('2026-01-29T12:00:00Z'),
         },
         {
           id: 'project-2',
+          projectNumber: 'PRJ-002',
           name: 'Project 2',
+          companyName: 'Test Company',
+          addressLine1: '456 Oak Ave',
+          addressLine2: 'Suite 100',
+          city: 'Vancouver',
+          region: 'British Columbia',
+          postalCode: 'V6B 1A1',
+          country: 'Canada',
           status: 'ACTIVE',
           updatedAt: new Date('2026-01-28T12:00:00Z'),
         },
@@ -88,6 +104,9 @@ describe('ProjectsService', () => {
 
       expect(result).toHaveLength(2);
       expect(result[0].id).toBe('project-1');
+      expect(result[0].project_number).toBe('PRJ-001');
+      expect(result[0].company_name).toBe('Test Company');
+      expect(result[0].address_display).toContain('123 Main St');
       expect(result[0].updated_at).toBe('2026-01-29T12:00:00.000Z');
 
       expect(mockPrismaFindMany).toHaveBeenCalledWith({
@@ -103,7 +122,15 @@ describe('ProjectsService', () => {
         },
         select: {
           id: true,
+          projectNumber: true,
           name: true,
+          companyName: true,
+          addressLine1: true,
+          addressLine2: true,
+          city: true,
+          region: true,
+          postalCode: true,
+          country: true,
           status: true,
           updatedAt: true,
         },
@@ -144,12 +171,34 @@ describe('ProjectsService', () => {
 
   describe('createProject', () => {
     it('should allow OWNER to create project', async () => {
-      const dto = { name: 'New Project', location: 'Toronto' };
+      const dto = {
+        project_number: 'PRJ-001',
+        name: 'New Project',
+        company_name: 'Test Company',
+        address_line_1: '123 Main St',
+        city: 'Toronto',
+        region: 'Ontario',
+        postal_code: 'M5H 2N2',
+        country: 'Canada',
+        location: 'Toronto',
+      };
       const mockProject = {
         id: 'project-1',
+        projectNumber: 'PRJ-001',
         name: 'New Project',
+        companyName: 'Test Company',
+        addressLine1: '123 Main St',
+        addressLine2: null,
+        city: 'Toronto',
+        region: 'Ontario',
+        postalCode: 'M5H 2N2',
+        country: 'Canada',
+        location: 'Toronto',
         status: 'ACTIVE',
+        updatedAt: new Date('2026-01-29T12:00:00Z'),
       };
+
+      mockPrismaFindFirst.mockResolvedValue(null); // No duplicate project number
 
       mockTransaction.mockImplementation(async (callback) => {
         const tx = {
@@ -162,35 +211,64 @@ describe('ProjectsService', () => {
 
       const result = await service.createProject(ownerUser, dto);
 
-      expect(result).toEqual({
-        id: 'project-1',
-        name: 'New Project',
-        status: 'ACTIVE',
-      });
+      expect(result.id).toBe('project-1');
+      expect(result.project_number).toBe('PRJ-001');
+      expect(result.name).toBe('New Project');
+      expect(result.company_name).toBe('Test Company');
+      expect(result.status).toBe('ACTIVE');
     });
 
     it('should deny MEMBER from creating project', async () => {
-      const dto = { name: 'New Project' };
+      const dto = {
+        project_number: 'PRJ-001',
+        name: 'New Project',
+        company_name: 'Test Company',
+        address_line_1: '123 Main St',
+        city: 'Toronto',
+        region: 'Ontario',
+        postal_code: 'M5H 2N2',
+        country: 'Canada',
+      };
 
-      await expect(service.createProject(memberUser, dto)).rejects.toThrow(
-        ForbiddenException,
-      );
+      await expect(service.createProject(memberUser, dto)).rejects.toThrow(ForbiddenException);
       await expect(service.createProject(memberUser, dto)).rejects.toThrow(
         'Only OWNER can create projects',
       );
     });
 
     it('should create project with correct data', async () => {
-      const dto = { name: 'New Project', location: 'Toronto' };
+      const dto = {
+        project_number: 'PRJ-001',
+        name: 'New Project',
+        company_name: 'Test Company',
+        address_line_1: '123 Main St',
+        city: 'Toronto',
+        region: 'Ontario',
+        postal_code: 'M5H 2N2',
+        country: 'Canada',
+        location: 'Toronto',
+      };
       const mockProject = {
         id: 'project-1',
+        projectNumber: 'PRJ-001',
         name: 'New Project',
+        companyName: 'Test Company',
+        addressLine1: '123 Main St',
+        addressLine2: null,
+        city: 'Toronto',
+        region: 'Ontario',
+        postalCode: 'M5H 2N2',
+        country: 'Canada',
+        location: 'Toronto',
         status: 'ACTIVE',
+        updatedAt: new Date('2026-01-29T12:00:00Z'),
       };
 
       const mockTxCreate = jest.fn().mockResolvedValue(mockProject);
       const mockMemberCreate = jest.fn();
       const mockAuditCreate = jest.fn();
+
+      mockPrismaFindFirst.mockResolvedValue(null); // No duplicate project number
 
       mockTransaction.mockImplementation(async (callback) => {
         const tx = {
@@ -206,7 +284,15 @@ describe('ProjectsService', () => {
       expect(mockTxCreate).toHaveBeenCalledWith({
         data: {
           companyId: 'company-1',
+          projectNumber: 'PRJ-001',
           name: 'New Project',
+          companyName: 'Test Company',
+          addressLine1: '123 Main St',
+          addressLine2: undefined,
+          city: 'Toronto',
+          region: 'Ontario',
+          postalCode: 'M5H 2N2',
+          country: 'Canada',
           location: 'Toronto',
           status: ProjectStatus.ACTIVE,
         },
@@ -238,9 +324,18 @@ describe('ProjectsService', () => {
     it('should allow OWNER to archive project', async () => {
       const mockProject = {
         id: 'project-1',
+        projectNumber: 'PRJ-001',
         name: 'Project 1',
+        companyName: 'Test Company',
+        addressLine1: '123 Main St',
+        addressLine2: null,
+        city: 'Toronto',
+        region: 'Ontario',
+        postalCode: 'M5H 2N2',
+        country: 'Canada',
         status: 'ACTIVE',
         companyId: 'company-1',
+        updatedAt: new Date('2026-01-29T12:00:00Z'),
       };
 
       const mockArchivedProject = {
@@ -253,11 +348,9 @@ describe('ProjectsService', () => {
 
       const result = await service.archiveProject(ownerUser, 'project-1');
 
-      expect(result).toEqual({
-        id: 'project-1',
-        name: 'Project 1',
-        status: 'ARCHIVED',
-      });
+      expect(result.id).toBe('project-1');
+      expect(result.name).toBe('Project 1');
+      expect(result.status).toBe('ARCHIVED');
 
       expect(mockAuditRecord).toHaveBeenCalledWith({
         companyId: 'company-1',
@@ -270,31 +363,31 @@ describe('ProjectsService', () => {
     });
 
     it('should deny MEMBER from archiving project', async () => {
-      await expect(
-        service.archiveProject(memberUser, 'project-1'),
-      ).rejects.toThrow(ForbiddenException);
-      await expect(
-        service.archiveProject(memberUser, 'project-1'),
-      ).rejects.toThrow('Only OWNER can archive projects');
+      await expect(service.archiveProject(memberUser, 'project-1')).rejects.toThrow(
+        ForbiddenException,
+      );
+      await expect(service.archiveProject(memberUser, 'project-1')).rejects.toThrow(
+        'Only OWNER can archive projects',
+      );
     });
 
     it('should throw NotFoundException if project does not exist', async () => {
       mockPrismaFindFirst.mockResolvedValue(null);
 
-      await expect(
-        service.archiveProject(ownerUser, 'nonexistent'),
-      ).rejects.toThrow(NotFoundException);
-      await expect(
-        service.archiveProject(ownerUser, 'nonexistent'),
-      ).rejects.toThrow('Project not found');
+      await expect(service.archiveProject(ownerUser, 'nonexistent')).rejects.toThrow(
+        NotFoundException,
+      );
+      await expect(service.archiveProject(ownerUser, 'nonexistent')).rejects.toThrow(
+        'Project not found',
+      );
     });
 
     it('should scope project lookup by companyId', async () => {
       mockPrismaFindFirst.mockResolvedValue(null);
 
-      await expect(
-        service.archiveProject(ownerUser, 'project-1'),
-      ).rejects.toThrow(NotFoundException);
+      await expect(service.archiveProject(ownerUser, 'project-1')).rejects.toThrow(
+        NotFoundException,
+      );
 
       expect(mockPrismaFindFirst).toHaveBeenCalledWith({
         where: {

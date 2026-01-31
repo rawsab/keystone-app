@@ -12,14 +12,27 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle, Plus } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { Separator } from "@/components/ui/separator";
 
 export function CreateProjectDialog() {
   const [open, setOpen] = useState(false);
-  const [name, setName] = useState("");
-  const [location, setLocation] = useState("");
+  const [formData, setFormData] = useState({
+    project_number: "",
+    name: "",
+    company_name: "",
+    address_line_1: "",
+    address_line_2: "",
+    city: "",
+    region: "",
+    postal_code: "",
+    country: "Canada",
+    location: "",
+  });
   const [error, setError] = useState<string | null>(null);
 
   const createProject = useCreateProject();
@@ -28,14 +41,50 @@ export function CreateProjectDialog() {
     e.preventDefault();
     setError(null);
 
-    if (!name.trim()) {
+    if (!formData.project_number.trim()) {
+      setError("Project number is required");
+      return;
+    }
+    if (!formData.name.trim()) {
       setError("Project name is required");
+      return;
+    }
+    if (!formData.company_name.trim()) {
+      setError("Company name is required");
+      return;
+    }
+    if (!formData.address_line_1.trim()) {
+      setError("Address line 1 is required");
+      return;
+    }
+    if (!formData.city.trim()) {
+      setError("City is required");
+      return;
+    }
+    if (!formData.region.trim()) {
+      setError("Province/State is required");
+      return;
+    }
+    if (!formData.postal_code.trim()) {
+      setError("Postal code is required");
+      return;
+    }
+    if (!formData.country.trim()) {
+      setError("Country is required");
       return;
     }
 
     const response = await createProject.mutateAsync({
-      name: name.trim(),
-      location: location.trim() || undefined,
+      project_number: formData.project_number.trim(),
+      name: formData.name.trim(),
+      company_name: formData.company_name.trim(),
+      address_line_1: formData.address_line_1.trim(),
+      address_line_2: formData.address_line_2.trim() || undefined,
+      city: formData.city.trim(),
+      region: formData.region.trim(),
+      postal_code: formData.postal_code.trim(),
+      country: formData.country.trim(),
+      location: formData.location.trim() || undefined,
     });
 
     if (response.error) {
@@ -45,19 +94,39 @@ export function CreateProjectDialog() {
 
     toast({
       title: "Project created",
-      description: `"${name}" has been created successfully.`,
+      description: `"${formData.name}" has been created successfully.`,
     });
 
     setOpen(false);
-    setName("");
-    setLocation("");
+    setFormData({
+      project_number: "",
+      name: "",
+      company_name: "",
+      address_line_1: "",
+      address_line_2: "",
+      city: "",
+      region: "",
+      postal_code: "",
+      country: "Canada",
+      location: "",
+    });
   };
 
   const handleOpenChange = (newOpen: boolean) => {
     setOpen(newOpen);
     if (!newOpen) {
-      setName("");
-      setLocation("");
+      setFormData({
+        project_number: "",
+        name: "",
+        company_name: "",
+        address_line_1: "",
+        address_line_2: "",
+        city: "",
+        region: "",
+        postal_code: "",
+        country: "Canada",
+        location: "",
+      });
       setError(null);
     }
   };
@@ -66,11 +135,11 @@ export function CreateProjectDialog() {
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         <Button>
-          <Plus className="mr-2 h-4 w-4" />
+          <Plus className="mr-0 h-4 w-4" />
           Create Project
         </Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="max-h-[90vh] overflow-y-auto">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>Create New Project</DialogTitle>
@@ -88,35 +157,143 @@ export function CreateProjectDialog() {
             )}
 
             <div className="space-y-2">
-              <label htmlFor="name" className="text-sm font-medium">
-                Project Name <span className="text-destructive">*</span>
-              </label>
-              <input
-                id="name"
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
+              <Label htmlFor="project_number">
+                Project ID <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                id="project_number"
+                value={formData.project_number}
+                onChange={(e) =>
+                  setFormData({ ...formData, project_number: e.target.value })
+                }
                 required
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                placeholder="ABC Construction Site"
+                placeholder="PRJ-001"
               />
             </div>
 
             <div className="space-y-2">
-              <label htmlFor="location" className="text-sm font-medium">
-                Location
-              </label>
-              <input
-                id="location"
-                type="text"
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                placeholder="Toronto, ON"
+              <Label htmlFor="name">
+                Project Name <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                id="name"
+                value={formData.name}
+                onChange={(e) =>
+                  setFormData({ ...formData, name: e.target.value })
+                }
+                required
+                placeholder="Downtown Tower Construction"
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="company_name">
+                Company <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                id="company_name"
+                value={formData.company_name}
+                onChange={(e) =>
+                  setFormData({ ...formData, company_name: e.target.value })
+                }
+                required
+                placeholder="ABC Construction Inc."
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="address_line_1">
+                Address Line 1 <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                id="address_line_1"
+                value={formData.address_line_1}
+                onChange={(e) =>
+                  setFormData({ ...formData, address_line_1: e.target.value })
+                }
+                required
+                placeholder="123 Main Street"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="address_line_2">Address Line 2</Label>
+              <Input
+                id="address_line_2"
+                value={formData.address_line_2}
+                onChange={(e) =>
+                  setFormData({ ...formData, address_line_2: e.target.value })
+                }
+                placeholder="Suite 100"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="city">
+                  City <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="city"
+                  value={formData.city}
+                  onChange={(e) =>
+                    setFormData({ ...formData, city: e.target.value })
+                  }
+                  required
+                  placeholder="Toronto"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="region">
+                  Province/State <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="region"
+                  value={formData.region}
+                  onChange={(e) =>
+                    setFormData({ ...formData, region: e.target.value })
+                  }
+                  required
+                  placeholder="Ontario"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="postal_code">
+                  Postal Code <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="postal_code"
+                  value={formData.postal_code}
+                  onChange={(e) =>
+                    setFormData({ ...formData, postal_code: e.target.value })
+                  }
+                  required
+                  placeholder="M5H 2N2"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="country">
+                  Country <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="country"
+                  value={formData.country}
+                  onChange={(e) =>
+                    setFormData({ ...formData, country: e.target.value })
+                  }
+                  required
+                  placeholder="Canada"
+                />
+              </div>
             </div>
           </div>
 
+          <Separator className="mb-4" />
           <DialogFooter>
             <Button
               type="button"

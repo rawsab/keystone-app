@@ -340,7 +340,7 @@ export default function DashboardPage() {
           <CardContent>
             <Link href={routes.app.projects}>
               <Button>
-                <FolderKanban className="mr-2 h-4 w-4" />
+                <FolderKanban className="mr-0 h-4 w-4" />
                 Create Project
               </Button>
             </Link>

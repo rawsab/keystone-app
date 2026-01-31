@@ -86,7 +86,15 @@ if [ -z "$PROJECT_ID" ] || [ "$PROJECT_ID" = "null" ]; then
       -H "Authorization: Bearer $TOKEN" \
       -H "Content-Type: application/json" \
       -d "{
+        \"project_number\": \"PRJ-001\",
         \"name\": \"Test Project\",
+        \"company_name\": \"Test Construction Co\",
+        \"address_line_1\": \"123 Main Street\",
+        \"address_line_2\": \"Suite 100\",
+        \"city\": \"Toronto\",
+        \"region\": \"Ontario\",
+        \"postal_code\": \"M5H 2N2\",
+        \"country\": \"Canada\",
         \"location\": \"Test Site\"
       }")
     

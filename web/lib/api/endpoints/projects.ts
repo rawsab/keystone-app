@@ -3,25 +3,52 @@ import { ApiResult } from "../types";
 
 export interface ProjectListItem {
   id: string;
+  project_number: string;
   name: string;
+  company_name: string;
+  address_display: string;
   status: string;
   updated_at: string;
-  location?: string;
 }
 
 export interface ProjectDetail extends ProjectListItem {
+  address_line_1: string;
+  address_line_2?: string;
+  city: string;
+  region: string;
+  postal_code: string;
+  country: string;
   location?: string;
 }
 
 export interface CreateProjectRequest {
+  project_number: string;
   name: string;
+  company_name: string;
+  address_line_1: string;
+  address_line_2?: string;
+  city: string;
+  region: string;
+  postal_code: string;
+  country: string;
   location?: string;
 }
 
 export interface ProjectResponse {
   id: string;
+  project_number: string;
   name: string;
+  company_name: string;
+  address_line_1: string;
+  address_line_2?: string;
+  city: string;
+  region: string;
+  postal_code: string;
+  country: string;
+  address_display: string;
+  location?: string;
   status: string;
+  updated_at: string;
 }
 
 export async function listProjects(): ApiResult<ProjectListItem[]> {

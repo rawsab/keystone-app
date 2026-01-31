@@ -1,21 +1,25 @@
 import { IsString, IsOptional, MinLength } from 'class-validator';
 
-export class CreateProjectDto {
+export class UpdateProjectDto {
   @IsString()
   @MinLength(1)
-  project_number: string;
+  @IsOptional()
+  project_number?: string;
 
   @IsString()
   @MinLength(1)
-  name: string;
+  @IsOptional()
+  name?: string;
 
   @IsString()
   @MinLength(1)
-  company_name: string;
+  @IsOptional()
+  company_name?: string;
 
   @IsString()
   @MinLength(1)
-  address_line_1: string;
+  @IsOptional()
+  address_line_1?: string;
 
   @IsString()
   @IsOptional()
@@ -23,19 +27,23 @@ export class CreateProjectDto {
 
   @IsString()
   @MinLength(1)
-  city: string;
+  @IsOptional()
+  city?: string;
 
   @IsString()
   @MinLength(1)
-  region: string;
+  @IsOptional()
+  region?: string;
 
   @IsString()
   @MinLength(1)
-  postal_code: string;
+  @IsOptional()
+  postal_code?: string;
 
   @IsString()
   @MinLength(1)
-  country: string;
+  @IsOptional()
+  country?: string;
 
   @IsString()
   @IsOptional()

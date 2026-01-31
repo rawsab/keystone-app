@@ -122,12 +122,38 @@ export default function ProjectDashboardPage({
 
           <Card>
             <CardHeader>
-              <CardTitle>Project Metadata</CardTitle>
+              <CardTitle>Project Information</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-2">
+            <CardContent className="space-y-1">
+              {project.project_number && (
+                <div>
+                  <span className="text-sm font-medium">Project Number: </span>
+                  <span className="text-sm text-muted-foreground font-mono">
+                    {project.project_number}
+                  </span>
+                </div>
+              )}
+              {project.company_name && (
+                <div>
+                  <span className="text-sm font-medium">Company: </span>
+                  <span className="text-sm text-muted-foreground">
+                    {project.company_name}
+                  </span>
+                </div>
+              )}
+              {project.address_display && (
+                <div>
+                  <span className="text-sm font-medium">Address: </span>
+                  <span className="text-sm text-muted-foreground">
+                    {project.address_display}
+                  </span>
+                </div>
+              )}
               {project.location && (
                 <div>
-                  <span className="text-sm font-medium">Location: </span>
+                  <span className="text-sm font-medium">
+                    Location (Legacy):{" "}
+                  </span>
                   <span className="text-sm text-muted-foreground">
                     {project.location}
                   </span>
@@ -147,7 +173,7 @@ export default function ProjectDashboardPage({
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
-                <div>
+                <div className="flex flex-col">
                   <CardTitle>Recent Daily Reports</CardTitle>
                   <CardDescription>
                     {allReports.length > 0
@@ -156,17 +182,25 @@ export default function ProjectDashboardPage({
                   </CardDescription>
                 </div>
                 {allReports.length > 0 && (
-                  <div className="flex items-center gap-2">
-                    <Link href={routes.project.reports(projectId)}>
-                      <Button variant="outline" size="sm">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                    <Link
+                      href={routes.project.reports(projectId)}
+                      className="w-full sm:w-auto"
+                    >
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full sm:w-auto"
+                      >
                         View All Reports
                         <ExternalLink className="ml-2 h-4 w-4" />
                       </Button>
                     </Link>
+
                     <CreateDailyReportDialog
                       projectId={projectId}
                       trigger={
-                        <Button size="sm">
+                        <Button size="sm" className="w-full sm:w-auto">
                           <Plus className="mr-0 h-4 w-4" />
                           Create Report
                         </Button>
