@@ -29,19 +29,33 @@ export function NavProjectsDropdown() {
   return (
     <Collapsible defaultOpen={isProjectRoute} className="group/projects">
       <SidebarMenuItem>
-        <CollapsibleTrigger asChild>
+        <div className="flex w-full min-w-0 items-center">
           <SidebarMenuButton
+            asChild
             tooltip="Projects"
-            className="flex cursor-pointer select-none items-center gap-2"
+            isActive={pathname === routes.app.projects}
+            className="flex-1 min-w-0"
           >
-            <FolderKanban className="size-4 shrink-0" />
-            <span className="truncate">Projects</span>
-            <ChevronDown
-              className="ml-auto size-4 shrink-0 transition-transform duration-200 group-data-[state=open]/projects:rotate-180"
-              aria-hidden
-            />
+            <Link href={routes.app.projects}>
+              <FolderKanban className="size-4 shrink-0" />
+              <span className="truncate">Projects</span>
+            </Link>
           </SidebarMenuButton>
-        </CollapsibleTrigger>
+          <CollapsibleTrigger asChild>
+            <button
+              type="button"
+              className="shrink-0 rounded-md p-2 outline-hidden ring-sidebar-ring hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 [&>svg]:size-4 group-data-[collapsible=icon]:hidden"
+              aria-label={
+                isProjectRoute ? "Collapse projects" : "Expand projects"
+              }
+            >
+              <ChevronDown
+                className="size-4 shrink-0 transition-transform duration-200 group-data-[state=open]/projects:rotate-180"
+                aria-hidden
+              />
+            </button>
+          </CollapsibleTrigger>
+        </div>
         <CollapsibleContent>
           <SidebarMenuSub className="group-data-[collapsible=icon]:hidden">
             {isLoading ? (
