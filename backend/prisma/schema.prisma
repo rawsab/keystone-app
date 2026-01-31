@@ -24,6 +24,7 @@ model Company {
   projectMembers          ProjectMember[]
   dailyReports            DailyReport[]
   fileObjects             FileObject[]
+  folders                 Folder[]
   dailyReportAttachments  DailyReportAttachment[]
   auditEvents             AuditEvent[]
 
@@ -83,6 +84,7 @@ model Project {
   members         ProjectMember[]
   dailyReports    DailyReport[]
   fileObjects     FileObject[]
+  folders        Folder[]
   auditEvents     AuditEvent[]
 
   @@unique([companyId, projectNumber])
@@ -156,6 +158,30 @@ model DailyReport {
 }
 
 // ============================================================================
+// FOLDERS (project or company-level)
+// ============================================================================
+
+model Folder {
+  id             String    @id @default(uuid()) @db.Uuid
+  companyId      String    @map("company_id") @db.Uuid
+  projectId      String?   @map("project_id") @db.Uuid
+  parentFolderId String?   @map("parent_folder_id") @db.Uuid
+  name           String
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  deletedAt      DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  company        Company     @relation(fields: [companyId], references: [id])
+  project        Project?    @relation(fields: [projectId], references: [id])
+  parentFolder   Folder?     @relation("FolderHierarchy", fields: [parentFolderId], references: [id])
+  childFolders   Folder[]    @relation("FolderHierarchy")
+  fileObjects    FileObject[]
+
+  @@index([companyId, projectId, parentFolderId])
+  @@index([companyId, parentFolderId])
+  @@map("folders")
+}
+
+// ============================================================================
 // FILE OBJECTS
 // ============================================================================
 
@@ -163,6 +189,7 @@ model FileObject {
   id               String    @id @default(uuid()) @db.Uuid
   companyId        String    @map("company_id") @db.Uuid
   projectId        String?   @map("project_id") @db.Uuid
+  folderId         String?   @map("folder_id") @db.Uuid
   storageProvider  String    @default("S3") @map("storage_provider")
   bucket           String
   objectKey        String    @map("object_key")
@@ -176,11 +203,12 @@ model FileObject {
 
   company     Company                 @relation(fields: [companyId], references: [id])
   project     Project?                @relation(fields: [projectId], references: [id])
+  folder      Folder?                 @relation(fields: [folderId], references: [id])
   uploadedBy  User                    @relation(fields: [uploadedByUserId], references: [id])
   attachments DailyReportAttachment[]
 
   @@unique([bucket, objectKey])
-  @@index([companyId, projectId, createdAt(sort: Desc)])
+  @@index([companyId, projectId, folderId, createdAt(sort: Desc)])
   @@index([companyId, uploadedByUserId])
   @@index([companyId, mimeType])
   @@map("file_objects")

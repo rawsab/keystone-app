@@ -5,6 +5,10 @@ export class FinalizeRequestDto {
   @IsUUID()
   project_id?: string;
 
+  @IsOptional()
+  @IsUUID()
+  folder_id?: string;
+
   @IsString()
   object_key: string;
 

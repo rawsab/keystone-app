@@ -127,4 +127,23 @@
     --sidebar-width: 12rem;
     --sidebar-width-icon: 4rem;
   }
+
+  /* Scrollbar track background (tables, overflow containers) */
+  * {
+    scrollbar-color: #525252 #0a0a0a;
+  }
+  *::-webkit-scrollbar {
+    height: 8px;
+    width: 8px;
+  }
+  *::-webkit-scrollbar-track {
+    background: #0a0a0a;
+  }
+  *::-webkit-scrollbar-thumb {
+    background: #525252;
+    border-radius: 4px;
+  }
+  *::-webkit-scrollbar-thumb:hover {
+    background: #737373;
+  }
 }

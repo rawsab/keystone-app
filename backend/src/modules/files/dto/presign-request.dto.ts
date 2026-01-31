@@ -27,6 +27,10 @@ export class PresignRequestDto {
   project_id?: string;
 
   @IsOptional()
+  @IsUUID()
+  folder_id?: string;
+
+  @IsOptional()
   @IsString()
   original_filename?: string;
 

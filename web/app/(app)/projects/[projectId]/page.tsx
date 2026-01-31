@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useProject } from "@/lib/queries/projects.queries";
 import { useDailyReportsList } from "@/lib/queries/dailyReports.queries";
 import { useProjectMembers } from "@/lib/queries/members.queries";
-import { useProjectFiles } from "@/lib/queries/files.queries";
+import { useProjectContents } from "@/lib/queries/files.queries";
 import { getFileDownloadUrl } from "@/lib/api/endpoints/files";
 import { CreateDailyReportDialog } from "@/components/app/daily-reports/CreateDailyReportDialog";
 import { EditProjectDialog } from "@/components/app/projects/EditProjectDialog";
@@ -35,6 +35,7 @@ import {
   ExternalLink,
   Plus,
   Pencil,
+  Folder,
   FolderOpen,
   Download,
 } from "lucide-react";
@@ -84,14 +85,17 @@ export default function ProjectDashboardPage({
   const membersApiError = membersResponse?.error;
 
   const {
-    data: filesResponse,
+    data: contentsResponse,
     isLoading: filesLoading,
     isError: filesError,
     refetch: refetchFiles,
-  } = useProjectFiles(projectId);
-  const allFiles = filesResponse?.data ?? [];
+  } = useProjectContents(projectId, null);
+  const allFolders = contentsResponse?.data?.folders ?? [];
+  const allFiles = contentsResponse?.data?.files ?? [];
+  const recentFolders = allFolders.slice(0, 5);
   const recentFiles = allFiles.slice(0, 5);
-  const filesApiError = filesResponse?.error;
+  const filesApiError = contentsResponse?.error;
+  const hasFilesOrFolders = allFolders.length > 0 || allFiles.length > 0;
 
   const [editProjectOpen, setEditProjectOpen] = useState(false);
 
@@ -448,9 +452,9 @@ export default function ProjectDashboardPage({
                 <div>
                   <CardTitle>Project Files</CardTitle>
                   <CardDescription>
-                    {allFiles.length > 0
-                      ? `${recentFiles.length} of ${allFiles.length} files shown`
-                      : "Files uploaded to this project"}
+                    {hasFilesOrFolders
+                      ? `${allFolders.length} folder${allFolders.length === 1 ? "" : "s"}, ${allFiles.length} file${allFiles.length === 1 ? "" : "s"}`
+                      : "Folders and files in this project"}
                   </CardDescription>
                 </div>
                 <Link href={routes.project.files(projectId)}>
@@ -494,16 +498,17 @@ export default function ProjectDashboardPage({
               {!filesLoading &&
                 !filesError &&
                 !filesApiError &&
-                recentFiles.length === 0 && (
+                !hasFilesOrFolders && (
                   <p className="text-sm text-muted-foreground">
-                    No files yet. Go to Project Files to upload.
+                    No files or folders yet. Go to Project Files to upload or
+                    create folders.
                   </p>
                 )}
 
               {!filesLoading &&
                 !filesError &&
                 !filesApiError &&
-                recentFiles.length > 0 && (
+                hasFilesOrFolders && (
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -514,6 +519,29 @@ export default function ProjectDashboardPage({
                       </TableRow>
                     </TableHeader>
                     <TableBody>
+                      {recentFolders.map((folder) => (
+                        <TableRow key={folder.id}>
+                          <TableCell className="font-medium">
+                            <div className="flex items-center gap-2">
+                              <Folder className="h-4 w-4 shrink-0 text-amber-600" />
+                              {folder.name}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {formatFileSize(folder.total_size_bytes)}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">
+                            —
+                          </TableCell>
+                          <TableCell>
+                            <Link href={routes.project.files(projectId)}>
+                              <Button variant="ghost" size="sm">
+                                <FolderOpen className="h-4 w-4" />
+                              </Button>
+                            </Link>
+                          </TableCell>
+                        </TableRow>
+                      ))}
                       {recentFiles.map((file) => (
                         <TableRow key={file.id}>
                           <TableCell className="font-medium">

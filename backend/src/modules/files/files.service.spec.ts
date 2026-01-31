@@ -12,6 +12,7 @@ describe('FilesService', () => {
   let service: FilesService;
   let mockPrismaCreate: jest.Mock;
   let mockPrismaFindMany: jest.Mock;
+  let mockFolderFindMany: jest.Mock;
   let mockPrismaFindFirst: jest.Mock;
   let mockMembershipVerifyProjectExists: jest.Mock;
   let mockMembershipIsProjectMember: jest.Mock;
@@ -37,6 +38,7 @@ describe('FilesService', () => {
   beforeEach(async () => {
     mockPrismaCreate = jest.fn();
     mockPrismaFindMany = jest.fn();
+    mockFolderFindMany = jest.fn();
     mockPrismaFindFirst = jest.fn();
     mockMembershipVerifyProjectExists = jest.fn();
     mockMembershipIsProjectMember = jest.fn();
@@ -50,6 +52,11 @@ describe('FilesService', () => {
         create: mockPrismaCreate,
         findMany: mockPrismaFindMany,
         findFirst: mockPrismaFindFirst,
+      },
+      folder: {
+        findMany: mockFolderFindMany,
+        findFirst: mockPrismaFindFirst,
+        create: jest.fn(),
       },
     };
 
@@ -256,6 +263,7 @@ describe('FilesService', () => {
         data: {
           companyId: 'company-1',
           projectId,
+          folderId: null,
           bucket: 'test-bucket',
           objectKey: finalizeDto.object_key,
           originalFilename: 'photo.jpg',
@@ -374,10 +382,11 @@ describe('FilesService', () => {
     });
   });
 
-  describe('listProjectFiles', () => {
-    it('should allow project member to list files', async () => {
+  describe('listProjectContents', () => {
+    it('should allow project member to list folders and files', async () => {
       mockMembershipVerifyProjectExists.mockResolvedValue(true);
       mockMembershipIsProjectMember.mockResolvedValue(true);
+      mockFolderFindMany.mockResolvedValue([]);
       mockPrismaFindMany.mockResolvedValue([
         {
           id: 'file-1',
@@ -403,10 +412,11 @@ describe('FilesService', () => {
         },
       ]);
 
-      const result = await service.listProjectFiles(memberUser, projectId);
+      const result = await service.listProjectContents(memberUser, projectId);
 
-      expect(result).toHaveLength(2);
-      expect(result[0]).toEqual({
+      expect(result.folders).toHaveLength(0);
+      expect(result.files).toHaveLength(2);
+      expect(result.files[0]).toEqual({
         id: 'file-1',
         original_filename: 'photo1.jpg',
         mime_type: 'image/jpeg',
@@ -418,27 +428,35 @@ describe('FilesService', () => {
         created_at: '2026-01-29T15:00:00.000Z',
       });
 
+      expect(mockFolderFindMany).toHaveBeenCalledWith({
+        where: {
+          companyId: 'company-1',
+          projectId,
+          parentFolderId: null,
+          deletedAt: null,
+        },
+        orderBy: { name: 'asc' },
+      });
       expect(mockPrismaFindMany).toHaveBeenCalledWith({
         where: {
           projectId,
           companyId: 'company-1',
+          folderId: null,
           deletedAt: null,
         },
         include: expect.any(Object),
-        orderBy: {
-          createdAt: 'desc',
-        },
+        orderBy: { createdAt: 'desc' },
       });
     });
 
-    it('should deny non-member from listing files', async () => {
+    it('should deny non-member from listing', async () => {
       mockMembershipVerifyProjectExists.mockResolvedValue(true);
       mockMembershipIsProjectMember.mockResolvedValue(false);
 
-      await expect(service.listProjectFiles(memberUser, projectId)).rejects.toThrow(
+      await expect(service.listProjectContents(memberUser, projectId)).rejects.toThrow(
         ForbiddenException,
       );
-      await expect(service.listProjectFiles(memberUser, projectId)).rejects.toThrow(
+      await expect(service.listProjectContents(memberUser, projectId)).rejects.toThrow(
         'Not a project member',
       );
     });
@@ -446,31 +464,40 @@ describe('FilesService', () => {
     it('should throw NotFoundException if project does not exist', async () => {
       mockMembershipVerifyProjectExists.mockResolvedValue(false);
 
-      await expect(service.listProjectFiles(memberUser, projectId)).rejects.toThrow(
+      await expect(service.listProjectContents(memberUser, projectId)).rejects.toThrow(
         NotFoundException,
       );
-      await expect(service.listProjectFiles(memberUser, projectId)).rejects.toThrow(
+      await expect(service.listProjectContents(memberUser, projectId)).rejects.toThrow(
         'Project not found',
       );
     });
 
-    it('should scope query by companyId and exclude deleted files', async () => {
+    it('should scope query by companyId and exclude deleted', async () => {
       mockMembershipVerifyProjectExists.mockResolvedValue(true);
       mockMembershipIsProjectMember.mockResolvedValue(true);
+      mockFolderFindMany.mockResolvedValue([]);
       mockPrismaFindMany.mockResolvedValue([]);
 
-      await service.listProjectFiles(memberUser, projectId);
+      await service.listProjectContents(memberUser, projectId);
 
+      expect(mockFolderFindMany).toHaveBeenCalledWith({
+        where: {
+          companyId: 'company-1',
+          projectId,
+          parentFolderId: null,
+          deletedAt: null,
+        },
+        orderBy: { name: 'asc' },
+      });
       expect(mockPrismaFindMany).toHaveBeenCalledWith({
         where: {
           projectId,
           companyId: 'company-1',
+          folderId: null,
           deletedAt: null,
         },
         include: expect.any(Object),
-        orderBy: {
-          createdAt: 'desc',
-        },
+        orderBy: { createdAt: 'desc' },
       });
     });
   });

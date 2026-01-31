@@ -34,6 +34,10 @@ export function canDeleteFile(user: PolicyUser): boolean {
   return user.role === UserRole.OWNER;
 }
 
+export function canDeleteFolder(user: PolicyUser): boolean {
+  return user.role === UserRole.OWNER;
+}
+
 export function canApproveDailyReport(user: PolicyUser): boolean {
   return user.role === UserRole.OWNER;
 }

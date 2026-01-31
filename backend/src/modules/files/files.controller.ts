@@ -18,6 +18,11 @@ import { PresignResponseDto, PresignBatchResponseDto } from './dto/presign-respo
 import { FinalizeRequestDto } from './dto/finalize-request.dto';
 import { FileResponseDto } from './dto/file-response.dto';
 import { CompanyFileListItemDto } from './dto/company-file-list-item.dto';
+import { CompanyContentsDto } from './dto/company-contents.dto';
+import { ProjectContentsDto } from './dto/project-contents.dto';
+import { FolderListItemDto } from './dto/folder-list-item.dto';
+import { CreateFolderDto } from './dto/create-folder.dto';
+import { RenameFolderDto } from './dto/rename-folder.dto';
 import { RenameFileDto } from './dto/rename-file.dto';
 import { ApiResponse } from '../../common/interfaces/api-response.interface';
 
@@ -67,37 +72,173 @@ export class FilesController {
   }
 
   @Get('files')
-  async listCompanyFiles(
+  async listCompanyContents(
     @CurrentUser() user: AuthUser,
-  ): Promise<ApiResponse<CompanyFileListItemDto[]>> {
-    const files = await this.filesService.listCompanyFiles({
-      userId: user.userId,
-      companyId: user.companyId,
-      role: user.role,
-    });
+    @Query('folder_id') folderId?: string,
+  ): Promise<ApiResponse<CompanyContentsDto>> {
+    const contents = await this.filesService.listCompanyContents(
+      {
+        userId: user.userId,
+        companyId: user.companyId,
+        role: user.role,
+      },
+      folderId ?? null,
+    );
 
     return {
-      data: files,
+      data: contents,
+      error: null,
+    };
+  }
+
+  @Post('files/folders')
+  async createCompanyFolder(
+    @CurrentUser() user: AuthUser,
+    @Body() dto: CreateFolderDto,
+  ): Promise<ApiResponse<FolderListItemDto>> {
+    const folder = await this.filesService.createCompanyFolder(
+      {
+        userId: user.userId,
+        companyId: user.companyId,
+        role: user.role,
+      },
+      dto,
+    );
+
+    return {
+      data: folder,
       error: null,
     };
   }
 
   @Get('projects/:projectId/files')
-  async listProjectFiles(
+  async listProjectContents(
     @CurrentUser() user: AuthUser,
     @Param('projectId') projectId: string,
-  ): Promise<ApiResponse<FileResponseDto[]>> {
-    const files = await this.filesService.listProjectFiles(
+    @Query('folder_id') folderId?: string,
+  ): Promise<ApiResponse<ProjectContentsDto>> {
+    const contents = await this.filesService.listProjectContents(
       {
         userId: user.userId,
         companyId: user.companyId,
         role: user.role,
       },
       projectId,
+      folderId ?? null,
     );
 
     return {
-      data: files,
+      data: contents,
+      error: null,
+    };
+  }
+
+  @Post('projects/:projectId/folders')
+  async createProjectFolder(
+    @CurrentUser() user: AuthUser,
+    @Param('projectId') projectId: string,
+    @Body() dto: CreateFolderDto,
+  ): Promise<ApiResponse<FolderListItemDto>> {
+    const folder = await this.filesService.createProjectFolder(
+      {
+        userId: user.userId,
+        companyId: user.companyId,
+        role: user.role,
+      },
+      projectId,
+      dto,
+    );
+
+    return {
+      data: folder,
+      error: null,
+    };
+  }
+
+  @Patch('projects/:projectId/folders/:folderId')
+  async renameProjectFolder(
+    @CurrentUser() user: AuthUser,
+    @Param('projectId') projectId: string,
+    @Param('folderId') folderId: string,
+    @Body() dto: RenameFolderDto,
+  ): Promise<ApiResponse<FolderListItemDto>> {
+    const folder = await this.filesService.renameProjectFolder(
+      {
+        userId: user.userId,
+        companyId: user.companyId,
+        role: user.role,
+      },
+      projectId,
+      folderId,
+      dto,
+    );
+
+    return {
+      data: folder,
+      error: null,
+    };
+  }
+
+  @Delete('projects/:projectId/folders/:folderId')
+  async deleteProjectFolder(
+    @CurrentUser() user: AuthUser,
+    @Param('projectId') projectId: string,
+    @Param('folderId') folderId: string,
+  ): Promise<ApiResponse<null>> {
+    await this.filesService.deleteProjectFolder(
+      {
+        userId: user.userId,
+        companyId: user.companyId,
+        role: user.role,
+      },
+      projectId,
+      folderId,
+    );
+
+    return {
+      data: null,
+      error: null,
+    };
+  }
+
+  @Patch('files/folders/:folderId')
+  async renameCompanyFolder(
+    @CurrentUser() user: AuthUser,
+    @Param('folderId') folderId: string,
+    @Body() dto: RenameFolderDto,
+  ): Promise<ApiResponse<FolderListItemDto>> {
+    const folder = await this.filesService.renameCompanyFolder(
+      {
+        userId: user.userId,
+        companyId: user.companyId,
+        role: user.role,
+      },
+      folderId,
+      dto,
+    );
+
+    return {
+      data: folder,
+      error: null,
+    };
+  }
+
+  @Delete('files/folders/:folderId')
+  async deleteCompanyFolder(
+    @CurrentUser() user: AuthUser,
+    @Param('folderId') folderId: string,
+  ): Promise<ApiResponse<null>> {
+    await this.filesService.deleteCompanyFolder(
+      {
+        userId: user.userId,
+        companyId: user.companyId,
+        role: user.role,
+      },
+      folderId,
+    );
+
+    return {
+      data: null,
       error: null,
     };
   }

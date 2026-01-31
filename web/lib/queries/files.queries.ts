@@ -1,7 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  listProjectFiles,
-  listCompanyFiles,
+  listProjectContents,
+  listCompanyContents,
+  createProjectFolder as createProjectFolderApi,
+  createCompanyFolder as createCompanyFolderApi,
+  renameProjectFolder as renameProjectFolderApi,
+  renameCompanyFolder as renameCompanyFolderApi,
+  deleteProjectFolder as deleteProjectFolderApi,
+  deleteCompanyFolder as deleteCompanyFolderApi,
   getFileDownloadUrl,
   renameFile as renameFileApi,
   deleteFile as deleteFileApi,
@@ -9,23 +15,130 @@ import {
 
 export const filesQueryKeys = {
   all: ["files"] as const,
-  project: (projectId: string) => ["files", "project", projectId] as const,
-  company: () => ["files", "company"] as const,
+  project: (projectId: string, folderId?: string | null) =>
+    ["files", "project", projectId, folderId ?? "root"] as const,
+  company: (folderId?: string | null) =>
+    ["files", "company", folderId ?? "root"] as const,
   downloadUrl: (fileId: string) => ["files", "download-url", fileId] as const,
 };
 
-export function useProjectFiles(projectId: string) {
+export function useProjectContents(
+  projectId: string,
+  folderId?: string | null,
+  options?: { enabled?: boolean },
+) {
+  const enabled = options?.enabled ?? true;
   return useQuery({
-    queryKey: filesQueryKeys.project(projectId),
-    queryFn: () => listProjectFiles(projectId),
-    enabled: !!projectId,
+    queryKey: filesQueryKeys.project(projectId, folderId),
+    queryFn: () => listProjectContents(projectId, folderId),
+    enabled: !!projectId && enabled,
   });
 }
 
-export function useCompanyFiles() {
+export function useCompanyContents(
+  folderId?: string | null,
+  options?: { enabled?: boolean },
+) {
+  const enabled = options?.enabled ?? true;
   return useQuery({
-    queryKey: filesQueryKeys.company(),
-    queryFn: listCompanyFiles,
+    queryKey: filesQueryKeys.company(folderId),
+    queryFn: () => listCompanyContents(folderId),
+    enabled,
+  });
+}
+
+export function useCreateProjectFolder(projectId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: { name: string; parent_folder_id?: string }) =>
+      createProjectFolderApi(projectId, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: filesQueryKeys.all });
+      queryClient.invalidateQueries({
+        predicate: (q) =>
+          q.queryKey[0] === "files" &&
+          q.queryKey[1] === "project" &&
+          q.queryKey[2] === projectId,
+      });
+    },
+  });
+}
+
+export function useCreateCompanyFolder() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: { name: string; parent_folder_id?: string }) =>
+      createCompanyFolderApi(payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: filesQueryKeys.all });
+      queryClient.invalidateQueries({
+        predicate: (q) =>
+          q.queryKey[0] === "files" && q.queryKey[1] === "company",
+      });
+    },
+  });
+}
+
+export function useRenameProjectFolder(projectId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ folderId, name }: { folderId: string; name: string }) =>
+      renameProjectFolderApi(projectId, folderId, { name }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: filesQueryKeys.all });
+      queryClient.invalidateQueries({
+        predicate: (q) =>
+          q.queryKey[0] === "files" &&
+          q.queryKey[1] === "project" &&
+          q.queryKey[2] === projectId,
+      });
+    },
+  });
+}
+
+export function useRenameCompanyFolder() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ folderId, name }: { folderId: string; name: string }) =>
+      renameCompanyFolderApi(folderId, { name }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: filesQueryKeys.all });
+      queryClient.invalidateQueries({
+        predicate: (q) =>
+          q.queryKey[0] === "files" && q.queryKey[1] === "company",
+      });
+    },
+  });
+}
+
+export function useDeleteProjectFolder(projectId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (folderId: string) =>
+      deleteProjectFolderApi(projectId, folderId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: filesQueryKeys.all });
+      queryClient.invalidateQueries({
+        predicate: (q) =>
+          q.queryKey[0] === "files" &&
+          q.queryKey[1] === "project" &&
+          q.queryKey[2] === projectId,
+      });
+    },
+  });
+}
+
+export function useDeleteCompanyFolder() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (folderId: string) => deleteCompanyFolderApi(folderId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: filesQueryKeys.all });
+      queryClient.invalidateQueries({
+        predicate: (q) =>
+          q.queryKey[0] === "files" && q.queryKey[1] === "company",
+      });
+    },
   });
 }
 
@@ -61,11 +174,14 @@ export function useRenameFile(options?: { projectId?: string }) {
       fileObjectId: string;
       file_name: string;
     }) => renameFileApi(fileObjectId, { file_name }),
-    onSuccess: (_, variables) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: filesQueryKeys.all });
       if (options?.projectId) {
         queryClient.invalidateQueries({
-          queryKey: filesQueryKeys.project(options.projectId),
+          predicate: (q) =>
+            q.queryKey[0] === "files" &&
+            q.queryKey[1] === "project" &&
+            q.queryKey[2] === options.projectId,
         });
       }
     },
@@ -77,11 +193,14 @@ export function useDeleteFile(options?: { projectId?: string }) {
 
   return useMutation({
     mutationFn: (fileObjectId: string) => deleteFileApi(fileObjectId),
-    onSuccess: (_, __) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: filesQueryKeys.all });
       if (options?.projectId) {
         queryClient.invalidateQueries({
-          queryKey: filesQueryKeys.project(options.projectId),
+          predicate: (q) =>
+            q.queryKey[0] === "files" &&
+            q.queryKey[1] === "project" &&
+            q.queryKey[2] === options.projectId,
         });
       }
     },

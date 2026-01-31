@@ -30,8 +30,27 @@ export interface PresignResponse {
   object_key: string;
 }
 
+export interface FolderListItem {
+  id: string;
+  name: string;
+  parent_folder_id: string | null;
+  created_at: string;
+  total_size_bytes: number;
+}
+
+export interface ProjectContents {
+  folders: FolderListItem[];
+  files: FileMetadata[];
+}
+
+export interface CompanyContents {
+  folders: FolderListItem[];
+  files: CompanyFileListItem[];
+}
+
 export interface PresignRequest {
   project_id?: string;
+  folder_id?: string;
   original_filename?: string;
   mime_type?: string;
   size_bytes?: number;
@@ -39,6 +58,7 @@ export interface PresignRequest {
 
 export interface FinalizeRequest {
   project_id?: string;
+  folder_id?: string;
   object_key: string;
   original_filename: string;
   mime_type: string;
@@ -52,14 +72,67 @@ export interface AttachmentListItem {
   size_bytes: number;
 }
 
-export async function listProjectFiles(
+export async function listProjectContents(
   projectId: string,
-): ApiResult<FileMetadata[]> {
-  return apiClient.get<FileMetadata[]>(`/projects/${projectId}/files`);
+  folderId?: string | null,
+): ApiResult<ProjectContents> {
+  const search = folderId ? `?folder_id=${encodeURIComponent(folderId)}` : "";
+  return apiClient.get<ProjectContents>(
+    `/projects/${projectId}/files${search}`,
+  );
 }
 
-export async function listCompanyFiles(): ApiResult<CompanyFileListItem[]> {
-  return apiClient.get<CompanyFileListItem[]>("/files");
+export async function listCompanyContents(
+  folderId?: string | null,
+): ApiResult<CompanyContents> {
+  const search = folderId ? `?folder_id=${encodeURIComponent(folderId)}` : "";
+  return apiClient.get<CompanyContents>(`/files${search}`);
+}
+
+export async function createProjectFolder(
+  projectId: string,
+  payload: { name: string; parent_folder_id?: string },
+): ApiResult<FolderListItem> {
+  return apiClient.post<FolderListItem>(
+    `/projects/${projectId}/folders`,
+    payload,
+  );
+}
+
+export async function createCompanyFolder(payload: {
+  name: string;
+  parent_folder_id?: string;
+}): ApiResult<FolderListItem> {
+  return apiClient.post<FolderListItem>("/files/folders", payload);
+}
+
+export async function renameProjectFolder(
+  projectId: string,
+  folderId: string,
+  payload: { name: string },
+): ApiResult<FolderListItem> {
+  return apiClient.patch<FolderListItem>(
+    `/projects/${projectId}/folders/${folderId}`,
+    payload,
+  );
+}
+
+export async function renameCompanyFolder(
+  folderId: string,
+  payload: { name: string },
+): ApiResult<FolderListItem> {
+  return apiClient.patch<FolderListItem>(`/files/folders/${folderId}`, payload);
+}
+
+export async function deleteProjectFolder(
+  projectId: string,
+  folderId: string,
+): ApiResult<null> {
+  return apiClient.delete<null>(`/projects/${projectId}/folders/${folderId}`);
+}
+
+export async function deleteCompanyFolder(folderId: string): ApiResult<null> {
+  return apiClient.delete<null>(`/files/folders/${folderId}`);
 }
 
 export async function getFileDownloadUrl(
