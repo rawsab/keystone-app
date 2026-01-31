@@ -64,9 +64,11 @@ export async function listCompanyFiles(): ApiResult<CompanyFileListItem[]> {
 
 export async function getFileDownloadUrl(
   fileObjectId: string,
+  options?: { preview?: boolean },
 ): ApiResult<{ download_url: string }> {
+  const search = options?.preview ? "?preview=1" : "";
   return apiClient.get<{ download_url: string }>(
-    `/files/${fileObjectId}/download-url`,
+    `/files/${fileObjectId}/download-url${search}`,
   );
 }
 

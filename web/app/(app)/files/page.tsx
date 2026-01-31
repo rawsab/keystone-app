@@ -26,6 +26,7 @@ import { format } from "date-fns";
 import { formatFileSize } from "@/lib/format/fileSize";
 import { toast } from "@/hooks/use-toast";
 import type { CompanyFileListItem } from "@/lib/api/endpoints/files";
+import { FileThumbnail } from "@/components/app/FileThumbnail";
 
 type SortField =
   | "file_name"
@@ -262,6 +263,7 @@ export default function DocumentsPage() {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-[52px]"> </TableHead>
               <Th field="file_name">Name</Th>
               <TableHead>Type</TableHead>
               <Th field="size_bytes">Size</Th>
@@ -274,6 +276,13 @@ export default function DocumentsPage() {
           <TableBody>
             {sorted.map((file: CompanyFileListItem) => (
               <TableRow key={file.id}>
+                <TableCell className="w-0">
+                  <FileThumbnail
+                    fileId={file.id}
+                    mimeType={file.mime_type}
+                    fileName={file.file_name}
+                  />
+                </TableCell>
                 <TableCell className="font-medium">{file.file_name}</TableCell>
                 <TableCell className="text-muted-foreground">
                   {file.mime_type}

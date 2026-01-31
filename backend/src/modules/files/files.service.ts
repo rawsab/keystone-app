@@ -341,7 +341,11 @@ export class FilesService {
     });
   }
 
-  async getDownloadUrl(user: PolicyUser, fileObjectId: string): Promise<string> {
+  async getDownloadUrl(
+    user: PolicyUser,
+    fileObjectId: string,
+    options?: { preview?: boolean },
+  ): Promise<string> {
     const file = await this.prisma.fileObject.findFirst({
       where: {
         id: fileObjectId,
@@ -363,6 +367,12 @@ export class FilesService {
       if (!isMember) {
         throw new ForbiddenException('Not a project member');
       }
+    }
+
+    // For preview/thumbnail, omit Content-Disposition so the presigned URL doesn't depend on
+    // the filename (spaces, dots, special chars can break signature encoding).
+    if (options?.preview) {
+      return this.s3Service.getPresignedDownloadUrl(file.objectKey);
     }
 
     const contentDisposition = `attachment; filename="${this.escapeContentDispositionFilename(file.originalFilename)}"`;

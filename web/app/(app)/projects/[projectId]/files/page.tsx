@@ -49,6 +49,7 @@ import { routes } from "@/lib/routes";
 import { format } from "date-fns";
 import { formatFileSize } from "@/lib/format/fileSize";
 import { toast } from "@/hooks/use-toast";
+import { FileThumbnail } from "@/components/app/FileThumbnail";
 
 export default function ProjectFilesPage({
   params,
@@ -288,6 +289,7 @@ export default function ProjectFilesPage({
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-[52px]"> </TableHead>
               <TableHead>Name</TableHead>
               <TableHead>Type</TableHead>
               <TableHead>Size</TableHead>
@@ -299,6 +301,13 @@ export default function ProjectFilesPage({
           <TableBody>
             {files.map((file) => (
               <TableRow key={file.id}>
+                <TableCell className="w-0">
+                  <FileThumbnail
+                    fileId={file.id}
+                    mimeType={file.mime_type}
+                    fileName={file.original_filename}
+                  />
+                </TableCell>
                 <TableCell className="font-medium">
                   {file.original_filename}
                 </TableCell>

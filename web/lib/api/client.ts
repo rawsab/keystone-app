@@ -19,9 +19,11 @@ export class ApiClient {
       const url = `${this.baseUrl}${endpoint}`;
 
       const token = getToken();
-      const headers: Record<string, string> = {
-        "Content-Type": "application/json",
-      };
+      const headers: Record<string, string> = {};
+      // Only set Content-Type when sending a body (avoid "body cannot be empty" errors for GET/DELETE)
+      if (options.body != null && options.body !== "") {
+        headers["Content-Type"] = "application/json";
+      }
 
       if (token) {
         headers["Authorization"] = `Bearer ${token}`;

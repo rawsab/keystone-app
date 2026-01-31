@@ -1,4 +1,14 @@
-import { Controller, Post, Get, Patch, Delete, Body, Param, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Get,
+  Patch,
+  Delete,
+  Body,
+  Param,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { JwtAuthGuard } from '../../security/guards/jwt-auth.guard';
 import { CurrentUser } from '../../security/decorators/current-user.decorator';
 import { AuthUser } from '../../security/jwt.strategy';
@@ -96,6 +106,7 @@ export class FilesController {
   async getFileDownloadUrl(
     @CurrentUser() user: AuthUser,
     @Param('fileObjectId') fileObjectId: string,
+    @Query('preview') preview?: string,
   ): Promise<ApiResponse<{ download_url: string }>> {
     const downloadUrl = await this.filesService.getDownloadUrl(
       {
@@ -104,6 +115,7 @@ export class FilesController {
         role: user.role,
       },
       fileObjectId,
+      { preview: preview === '1' || preview === 'true' },
     );
 
     return {
