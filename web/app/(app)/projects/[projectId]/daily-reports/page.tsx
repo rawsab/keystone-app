@@ -35,6 +35,7 @@ import {
 import { AlertCircle, RefreshCw, X } from "lucide-react";
 import { routes } from "@/lib/routes";
 import { format, formatDistanceToNow } from "date-fns";
+import { CalendarDays, CircleCheck, User, Clock } from "lucide-react";
 
 export default function DailyReportsListPage({
   params,

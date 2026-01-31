@@ -29,6 +29,7 @@ import {
 import { AlertCircle, RefreshCw, ExternalLink, Plus } from "lucide-react";
 import { routes } from "@/lib/routes";
 import { format, formatDistanceToNow } from "date-fns";
+import { Hash, Building2, MapPin, LocateFixed, Clock } from "lucide-react";
 
 export default function ProjectDashboardPage({
   params,
@@ -124,17 +125,19 @@ export default function ProjectDashboardPage({
             <CardHeader>
               <CardTitle>Project Information</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-1">
+            <CardContent className="space-y-2">
               {project.project_number && (
-                <div>
-                  <span className="text-sm font-medium">Project Number: </span>
+                <div className="flex items-center gap-2">
+                  <Hash className="mr-0 h-4 w-4" />
+                  <span className="text-sm font-medium">Project ID: </span>
                   <span className="text-sm text-muted-foreground font-mono">
                     {project.project_number}
                   </span>
                 </div>
               )}
               {project.company_name && (
-                <div>
+                <div className="flex items-center gap-2">
+                  <Building2 className="mr-0 h-4 w-4" />
                   <span className="text-sm font-medium">Company: </span>
                   <span className="text-sm text-muted-foreground">
                     {project.company_name}
@@ -142,7 +145,8 @@ export default function ProjectDashboardPage({
                 </div>
               )}
               {project.address_display && (
-                <div>
+                <div className="flex items-center gap-2">
+                  <MapPin className="mr-0 h-4 w-4" />
                   <span className="text-sm font-medium">Address: </span>
                   <span className="text-sm text-muted-foreground">
                     {project.address_display}
@@ -150,7 +154,8 @@ export default function ProjectDashboardPage({
                 </div>
               )}
               {project.location && (
-                <div>
+                <div className="flex items-center gap-2">
+                  <LocateFixed className="mr-0 h-4 w-4" />
                   <span className="text-sm font-medium">
                     Location (Legacy):{" "}
                   </span>
@@ -159,7 +164,8 @@ export default function ProjectDashboardPage({
                   </span>
                 </div>
               )}
-              <div>
+              <div className="flex items-center gap-2">
+                <Clock className="mr-0 h-4 w-4" />
                 <span className="text-sm font-medium">Last Updated: </span>
                 <span className="text-sm text-muted-foreground">
                   {formatDistanceToNow(new Date(project.updated_at), {
