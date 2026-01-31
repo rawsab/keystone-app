@@ -456,7 +456,7 @@ export default function ProjectDashboardPage({
                 <Link href={routes.project.files(projectId)}>
                   <Button variant="outline" size="sm" className="gap-2">
                     <FolderOpen className="h-4 w-4" />
-                    View all / Upload
+                    View All Files
                     <ExternalLink className="h-4 w-4" />
                   </Button>
                 </Link>
