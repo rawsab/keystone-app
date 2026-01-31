@@ -10,6 +10,7 @@ import { DailyReportsService } from './daily-reports.service';
 import { PrismaService } from '../../infra/db/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { MembershipService } from '../../security/rbac/membership.service';
+import { WeatherService } from '../weather/weather.service';
 import { UserRole, DailyReportStatus } from '../../security/rbac';
 
 describe('DailyReportsService', () => {
@@ -44,6 +45,17 @@ describe('DailyReportsService', () => {
     mockMembershipVerifyProjectExists = jest.fn();
     mockMembershipIsProjectMember = jest.fn();
     mockAuditRecord = jest.fn();
+
+    const mockWeatherService = {
+      getDailySnapshotForReport: jest.fn().mockResolvedValue({
+        ok: false,
+        failure: {
+          reason: 'no_location' as const,
+          message: 'Project needs City and Country for weather.',
+        },
+      }),
+      formatSummaryText: jest.fn().mockReturnValue(''),
+    };
 
     const mockPrismaService = {
       dailyReport: {
@@ -84,6 +96,10 @@ describe('DailyReportsService', () => {
         {
           provide: AuditService,
           useValue: mockAuditService,
+        },
+        {
+          provide: WeatherService,
+          useValue: mockWeatherService,
         },
       ],
     }).compile();
@@ -327,6 +343,13 @@ describe('DailyReportsService', () => {
         issues_delays_text: null,
         notes_text: null,
         weather_observed: null,
+        weather_observed_flags: null,
+        weather_observed_text: null,
+        weather_refresh_error: null,
+        weather_snapshot: null,
+        weather_snapshot_source: null,
+        weather_snapshot_taken_at: null,
+        weather_summary_text: null,
         hours_worked_total: null,
         created_by: {
           id: 'user-1',
@@ -487,6 +510,13 @@ describe('DailyReportsService', () => {
         issues_delays_text: null,
         notes_text: null,
         weather_observed: { condition: 'CLEAR', temperature_c: 15 },
+        weather_observed_flags: null,
+        weather_observed_text: null,
+        weather_refresh_error: null,
+        weather_snapshot: null,
+        weather_snapshot_source: null,
+        weather_snapshot_taken_at: null,
+        weather_summary_text: null,
         hours_worked_total: 8,
         created_by: {
           id: 'user-1',
