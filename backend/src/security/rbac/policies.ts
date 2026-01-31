@@ -26,14 +26,19 @@ export function canArchiveProject(user: PolicyUser): boolean {
   return user.role === UserRole.OWNER;
 }
 
+export function canUpdateProject(user: PolicyUser): boolean {
+  return user.role === UserRole.OWNER;
+}
+
+export function canDeleteFile(user: PolicyUser): boolean {
+  return user.role === UserRole.OWNER;
+}
+
 export function canApproveDailyReport(user: PolicyUser): boolean {
   return user.role === UserRole.OWNER;
 }
 
-export function canEditDraftDailyReport(
-  user: PolicyUser,
-  report: PolicyDailyReport,
-): boolean {
+export function canEditDraftDailyReport(user: PolicyUser, report: PolicyDailyReport): boolean {
   if (user.companyId !== report.companyId) {
     return false;
   }
@@ -45,10 +50,7 @@ export function canEditDraftDailyReport(
   return true;
 }
 
-export function canSubmitDailyReport(
-  user: PolicyUser,
-  report: PolicyDailyReport,
-): boolean {
+export function canSubmitDailyReport(user: PolicyUser, report: PolicyDailyReport): boolean {
   if (user.companyId !== report.companyId) {
     return false;
   }

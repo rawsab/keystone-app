@@ -6,6 +6,7 @@ export const routes = {
   app: {
     dashboard: "/",
     projects: "/projects",
+    files: "/files",
     settings: "/settings",
   },
   project: {
@@ -13,5 +14,6 @@ export const routes = {
     reports: (projectId: string) => `/projects/${projectId}/daily-reports`,
     report: (projectId: string, reportId: string) =>
       `/projects/${projectId}/daily-reports/${reportId}`,
+    files: (projectId: string) => `/projects/${projectId}/files`,
   },
 } as const;

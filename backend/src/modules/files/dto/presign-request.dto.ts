@@ -22,8 +22,9 @@ export class FilePresignItem {
 }
 
 export class PresignRequestDto {
+  @IsOptional()
   @IsUUID()
-  project_id: string;
+  project_id?: string;
 
   @IsOptional()
   @IsString()

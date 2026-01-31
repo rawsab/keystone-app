@@ -1,8 +1,9 @@
-import { IsString, IsNumber, IsUUID, Max } from 'class-validator';
+import { IsString, IsNumber, IsUUID, Max, IsOptional } from 'class-validator';
 
 export class FinalizeRequestDto {
+  @IsOptional()
   @IsUUID()
-  project_id: string;
+  project_id?: string;
 
   @IsString()
   object_key: string;

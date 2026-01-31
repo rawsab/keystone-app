@@ -55,6 +55,33 @@ export async function listProjects(): ApiResult<ProjectListItem[]> {
   return apiClient.get<ProjectListItem[]>("/projects");
 }
 
+export async function getProject(
+  projectId: string,
+): ApiResult<ProjectResponse> {
+  return apiClient.get<ProjectResponse>(`/projects/${projectId}`);
+}
+
+export interface UpdateProjectRequest {
+  project_number?: string;
+  name?: string;
+  company_name?: string;
+  address_line_1?: string;
+  address_line_2?: string;
+  city?: string;
+  region?: string;
+  postal_code?: string;
+  country?: string;
+  location?: string;
+  status?: "ACTIVE" | "ARCHIVED";
+}
+
+export async function updateProject(
+  projectId: string,
+  payload: UpdateProjectRequest,
+): ApiResult<ProjectResponse> {
+  return apiClient.patch<ProjectResponse>(`/projects/${projectId}`, payload);
+}
+
 /**
  * TEMPORARY WORKAROUND.
  * This function fetches the full project list and filters client-side

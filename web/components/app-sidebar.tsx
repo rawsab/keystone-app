@@ -2,15 +2,22 @@
 
 import * as React from "react";
 import Image from "next/image";
-import { LayoutDashboard, FolderKanban, Settings } from "lucide-react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { LayoutDashboard, FileText, Settings } from "lucide-react";
 
-import { NavMain } from "@/components/nav-main";
+import { NavProjectsDropdown } from "@/components/nav-projects-dropdown";
 import { NavUser } from "@/components/nav-user";
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
+  SidebarGroup,
+  SidebarGroupLabel,
   SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
   SidebarRail,
   useSidebar,
 } from "@/components/ui/sidebar";
@@ -23,7 +30,7 @@ function SidebarLogo() {
 
   return (
     <div className="flex h-12 items-center gap-3 px-1">
-      <div className="flex h-6 w-6 items-center justify-center flex-shrink-0">
+      <div className="flex h-6 w-6 items-center justify-center shrink-0">
         <Image
           src="/logo/keystone_logo.png"
           alt="Keystone"
@@ -45,25 +52,7 @@ function SidebarLogo() {
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { user } = useSession();
-
-  const navMain = [
-    {
-      title: "Dashboard",
-      url: routes.app.dashboard,
-      icon: LayoutDashboard,
-      isActive: true,
-    },
-    {
-      title: "Projects",
-      url: routes.app.projects,
-      icon: FolderKanban,
-    },
-    {
-      title: "Settings",
-      url: routes.app.settings,
-      icon: Settings,
-    },
-  ];
+  const pathname = usePathname();
 
   return (
     <Sidebar collapsible="icon" {...props}>
@@ -71,7 +60,45 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <SidebarLogo />
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={navMain} />
+        <SidebarGroup>
+          <SidebarGroupLabel>Navigation</SidebarGroupLabel>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                asChild
+                isActive={pathname === routes.app.dashboard}
+              >
+                <Link href={routes.app.dashboard}>
+                  <LayoutDashboard className="size-4" />
+                  <span>Dashboard</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <NavProjectsDropdown />
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                asChild
+                isActive={pathname === routes.app.files}
+              >
+                <Link href={routes.app.files}>
+                  <FileText className="size-4" />
+                  <span>Documents</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                asChild
+                isActive={pathname === routes.app.settings}
+              >
+                <Link href={routes.app.settings}>
+                  <Settings className="size-4" />
+                  <span>Settings</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarGroup>
       </SidebarContent>
       <SidebarFooter>
         <NavUser

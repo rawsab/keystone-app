@@ -1,16 +1,10 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Param,
-  Body,
-  UseGuards,
-} from '@nestjs/common';
+import { Controller, Get, Post, Patch, Param, Body, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../../security/guards/jwt-auth.guard';
 import { CurrentUser } from '../../security/decorators/current-user.decorator';
 import { AuthUser } from '../../security/jwt.strategy';
 import { ProjectsService } from './projects.service';
 import { CreateProjectDto } from './dto/create-project.dto';
+import { UpdateProjectDto } from './dto/update-project.dto';
 import { ApiResponse } from '../../common/interfaces/api-response.interface';
 import { ProjectListItemDto } from './dto/project-list-item.dto';
 import { ProjectResponseDto } from './dto/project-response.dto';
@@ -21,9 +15,7 @@ export class ProjectsController {
   constructor(private readonly projectsService: ProjectsService) {}
 
   @Get()
-  async listProjects(
-    @CurrentUser() user: AuthUser,
-  ): Promise<ApiResponse<ProjectListItemDto[]>> {
+  async listProjects(@CurrentUser() user: AuthUser): Promise<ApiResponse<ProjectListItemDto[]>> {
     const projects = await this.projectsService.listProjects({
       userId: user.userId,
       companyId: user.companyId,
@@ -32,6 +24,26 @@ export class ProjectsController {
 
     return {
       data: projects,
+      error: null,
+    };
+  }
+
+  @Get(':projectId')
+  async getProject(
+    @CurrentUser() user: AuthUser,
+    @Param('projectId') projectId: string,
+  ): Promise<ApiResponse<ProjectResponseDto>> {
+    const project = await this.projectsService.getProject(
+      {
+        userId: user.userId,
+        companyId: user.companyId,
+        role: user.role,
+      },
+      projectId,
+    );
+
+    return {
+      data: project,
       error: null,
     };
   }
@@ -47,6 +59,28 @@ export class ProjectsController {
         companyId: user.companyId,
         role: user.role,
       },
+      dto,
+    );
+
+    return {
+      data: project,
+      error: null,
+    };
+  }
+
+  @Patch(':projectId')
+  async updateProject(
+    @CurrentUser() user: AuthUser,
+    @Param('projectId') projectId: string,
+    @Body() dto: UpdateProjectDto,
+  ): Promise<ApiResponse<ProjectResponseDto>> {
+    const project = await this.projectsService.updateProject(
+      {
+        userId: user.userId,
+        companyId: user.companyId,
+        role: user.role,
+      },
+      projectId,
       dto,
     );
 

@@ -13,20 +13,32 @@ export interface FileMetadata {
   created_at: string;
 }
 
+export interface CompanyFileListItem {
+  id: string;
+  file_name: string;
+  mime_type: string;
+  size_bytes: number;
+  created_at: string;
+  uploaded_by: { id: string; full_name: string };
+  project_id: string | null;
+  project_name: string | null;
+  object_key: string;
+}
+
 export interface PresignResponse {
   upload_url: string;
   object_key: string;
 }
 
 export interface PresignRequest {
-  project_id: string;
-  original_filename: string;
-  mime_type: string;
-  size_bytes: number;
+  project_id?: string;
+  original_filename?: string;
+  mime_type?: string;
+  size_bytes?: number;
 }
 
 export interface FinalizeRequest {
-  project_id: string;
+  project_id?: string;
   object_key: string;
   original_filename: string;
   mime_type: string;
@@ -38,6 +50,28 @@ export interface AttachmentListItem {
   original_filename: string;
   mime_type: string;
   size_bytes: number;
+}
+
+export async function listProjectFiles(
+  projectId: string,
+): ApiResult<FileMetadata[]> {
+  return apiClient.get<FileMetadata[]>(`/projects/${projectId}/files`);
+}
+
+export async function listCompanyFiles(): ApiResult<CompanyFileListItem[]> {
+  return apiClient.get<CompanyFileListItem[]>("/files");
+}
+
+export async function getFileDownloadUrl(
+  fileObjectId: string,
+): ApiResult<{ download_url: string }> {
+  return apiClient.get<{ download_url: string }>(
+    `/files/${fileObjectId}/download-url`,
+  );
+}
+
+export async function deleteFile(fileObjectId: string): ApiResult<null> {
+  return apiClient.delete<null>(`/files/${fileObjectId}`);
 }
 
 export async function presignUpload(

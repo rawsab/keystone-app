@@ -3,17 +3,19 @@ import {
   ForbiddenException,
   NotFoundException,
   BadRequestException,
+  ConflictException,
 } from '@nestjs/common';
 import { PrismaService } from '../../infra/db/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { MembershipService } from '../../security/rbac/membership.service';
 import { S3Service } from '../../infra/storage/s3.service';
 import { EnvService } from '../../config/env.service';
-import { PolicyUser } from '../../security/rbac';
+import { PolicyUser, canDeleteFile } from '../../security/rbac';
 import { PresignRequestDto } from './dto/presign-request.dto';
 import { PresignResponseDto, PresignBatchResponseDto } from './dto/presign-response.dto';
 import { FinalizeRequestDto } from './dto/finalize-request.dto';
 import { FileResponseDto } from './dto/file-response.dto';
+import { CompanyFileListItemDto } from './dto/company-file-list-item.dto';
 
 @Injectable()
 export class FilesService {
@@ -29,26 +31,31 @@ export class FilesService {
     user: PolicyUser,
     dto: PresignRequestDto,
   ): Promise<PresignResponseDto | PresignBatchResponseDto> {
-    const projectExists = await this.membershipService.verifyProjectExists({
-      projectId: dto.project_id,
-      companyId: user.companyId,
-    });
+    if (dto.project_id != null) {
+      const projectExists = await this.membershipService.verifyProjectExists({
+        projectId: dto.project_id,
+        companyId: user.companyId,
+      });
 
-    if (!projectExists) {
-      throw new NotFoundException('Project not found');
-    }
+      if (!projectExists) {
+        throw new NotFoundException('Project not found');
+      }
 
-    const isMember = await this.membershipService.isProjectMember({
-      userId: user.userId,
-      companyId: user.companyId,
-      projectId: dto.project_id,
-    });
+      const isMember = await this.membershipService.isProjectMember({
+        userId: user.userId,
+        companyId: user.companyId,
+        projectId: dto.project_id,
+      });
 
-    if (!isMember) {
-      throw new ForbiddenException('Not a project member');
+      if (!isMember) {
+        throw new ForbiddenException('Not a project member');
+      }
     }
 
     if (dto.files && dto.files.length > 0) {
+      if (dto.project_id == null) {
+        throw new BadRequestException('Batch presign requires project_id');
+      }
       const items = await Promise.all(
         dto.files.map(async (file) => {
           const result = await this.s3Service.generatePresignedUploadUrl({
@@ -76,7 +83,7 @@ export class FilesService {
 
     const result = await this.s3Service.generatePresignedUploadUrl({
       companyId: user.companyId,
-      projectId: dto.project_id,
+      projectId: dto.project_id ?? undefined,
       mimeType: dto.mime_type,
     });
 
@@ -87,29 +94,31 @@ export class FilesService {
   }
 
   async finalizeUpload(user: PolicyUser, dto: FinalizeRequestDto): Promise<FileResponseDto> {
-    const projectExists = await this.membershipService.verifyProjectExists({
-      projectId: dto.project_id,
-      companyId: user.companyId,
-    });
+    if (dto.project_id != null) {
+      const projectExists = await this.membershipService.verifyProjectExists({
+        projectId: dto.project_id,
+        companyId: user.companyId,
+      });
 
-    if (!projectExists) {
-      throw new NotFoundException('Project not found');
-    }
+      if (!projectExists) {
+        throw new NotFoundException('Project not found');
+      }
 
-    const isMember = await this.membershipService.isProjectMember({
-      userId: user.userId,
-      companyId: user.companyId,
-      projectId: dto.project_id,
-    });
+      const isMember = await this.membershipService.isProjectMember({
+        userId: user.userId,
+        companyId: user.companyId,
+        projectId: dto.project_id,
+      });
 
-    if (!isMember) {
-      throw new ForbiddenException('Not a project member');
+      if (!isMember) {
+        throw new ForbiddenException('Not a project member');
+      }
     }
 
     const isValidPrefix = this.s3Service.validateObjectKeyPrefix({
       objectKey: dto.object_key,
       companyId: user.companyId,
-      projectId: dto.project_id,
+      projectId: dto.project_id ?? undefined,
     });
 
     if (!isValidPrefix) {
@@ -149,7 +158,7 @@ export class FilesService {
     const fileObject = await this.prisma.fileObject.create({
       data: {
         companyId: user.companyId,
-        projectId: dto.project_id,
+        projectId: dto.project_id ?? null,
         bucket: this.envService.s3Bucket,
         objectKey: dto.object_key,
         originalFilename: dto.original_filename,
@@ -170,7 +179,7 @@ export class FilesService {
     await this.auditService.record({
       companyId: user.companyId,
       actorUserId: user.userId,
-      projectId: dto.project_id,
+      projectId: dto.project_id ?? undefined,
       entityType: 'FILE_OBJECT',
       entityId: fileObject.id,
       action: 'UPLOADED',
@@ -243,5 +252,118 @@ export class FilesService {
       },
       created_at: file.createdAt.toISOString(),
     }));
+  }
+
+  async listCompanyFiles(user: PolicyUser): Promise<CompanyFileListItemDto[]> {
+    const files = await this.prisma.fileObject.findMany({
+      where: {
+        companyId: user.companyId,
+        deletedAt: null,
+      },
+      include: {
+        uploadedBy: {
+          select: {
+            id: true,
+            fullName: true,
+          },
+        },
+        project: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+
+    return files.map((file) => ({
+      id: file.id,
+      file_name: file.originalFilename,
+      mime_type: file.mimeType,
+      size_bytes: Number(file.sizeBytes),
+      created_at: file.createdAt.toISOString(),
+      uploaded_by: {
+        id: file.uploadedBy.id,
+        full_name: file.uploadedBy.fullName,
+      },
+      project_id: file.projectId,
+      project_name: file.project?.name ?? null,
+      object_key: file.objectKey,
+    }));
+  }
+
+  async deleteFile(user: PolicyUser, fileObjectId: string): Promise<void> {
+    if (!canDeleteFile(user)) {
+      throw new ForbiddenException('Only OWNER can delete files');
+    }
+
+    const file = await this.prisma.fileObject.findFirst({
+      where: {
+        id: fileObjectId,
+        companyId: user.companyId,
+        deletedAt: null,
+      },
+      include: {
+        _count: {
+          select: {
+            attachments: true,
+          },
+        },
+      },
+    });
+
+    if (!file) {
+      throw new NotFoundException('File not found');
+    }
+
+    if (file._count.attachments > 0) {
+      throw new ConflictException(
+        'File is attached to one or more daily reports and cannot be deleted',
+      );
+    }
+
+    await this.prisma.fileObject.update({
+      where: { id: fileObjectId },
+      data: { deletedAt: new Date() },
+    });
+
+    await this.auditService.record({
+      companyId: user.companyId,
+      actorUserId: user.userId,
+      projectId: file.projectId ?? undefined,
+      entityType: 'FILE_OBJECT',
+      entityId: file.id,
+      action: 'DELETED',
+    });
+  }
+
+  async getDownloadUrl(user: PolicyUser, fileObjectId: string): Promise<string> {
+    const file = await this.prisma.fileObject.findFirst({
+      where: {
+        id: fileObjectId,
+        companyId: user.companyId,
+        deletedAt: null,
+      },
+    });
+
+    if (!file) {
+      throw new NotFoundException('File not found');
+    }
+
+    if (file.projectId != null) {
+      const isMember = await this.membershipService.isProjectMember({
+        userId: user.userId,
+        companyId: user.companyId,
+        projectId: file.projectId,
+      });
+      if (!isMember) {
+        throw new ForbiddenException('Not a project member');
+      }
+    }
+
+    return this.s3Service.getPresignedDownloadUrl(file.objectKey);
   }
 }

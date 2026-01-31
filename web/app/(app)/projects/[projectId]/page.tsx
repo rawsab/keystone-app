@@ -1,12 +1,15 @@
 "use client";
 
-import { use } from "react";
+import { use, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useProject } from "@/lib/queries/projects.queries";
 import { useDailyReportsList } from "@/lib/queries/dailyReports.queries";
 import { useProjectMembers } from "@/lib/queries/members.queries";
+import { useProjectFiles } from "@/lib/queries/files.queries";
+import { getFileDownloadUrl } from "@/lib/api/endpoints/files";
 import { CreateDailyReportDialog } from "@/components/app/daily-reports/CreateDailyReportDialog";
+import { EditProjectDialog } from "@/components/app/projects/EditProjectDialog";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -26,10 +29,20 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { AlertCircle, RefreshCw, ExternalLink, Plus } from "lucide-react";
+import {
+  AlertCircle,
+  RefreshCw,
+  ExternalLink,
+  Plus,
+  Pencil,
+  FolderOpen,
+  Download,
+} from "lucide-react";
 import { routes } from "@/lib/routes";
 import { format, formatDistanceToNow } from "date-fns";
-import { Hash, Building2, MapPin, LocateFixed, Clock } from "lucide-react";
+import { Hash, Building2, MapPin, Clock } from "lucide-react";
+import { formatFileSize } from "@/lib/format/fileSize";
+import { toast } from "@/hooks/use-toast";
 
 export default function ProjectDashboardPage({
   params,
@@ -70,8 +83,33 @@ export default function ProjectDashboardPage({
   const members = membersResponse?.data || [];
   const membersApiError = membersResponse?.error;
 
+  const {
+    data: filesResponse,
+    isLoading: filesLoading,
+    isError: filesError,
+    refetch: refetchFiles,
+  } = useProjectFiles(projectId);
+  const allFiles = filesResponse?.data ?? [];
+  const recentFiles = allFiles.slice(0, 5);
+  const filesApiError = filesResponse?.error;
+
+  const [editProjectOpen, setEditProjectOpen] = useState(false);
+
   const handleReportClick = (reportId: string) => {
     router.push(routes.project.report(projectId, reportId));
+  };
+
+  const handleFileDownload = async (fileObjectId: string) => {
+    const res = await getFileDownloadUrl(fileObjectId);
+    if (res.data?.download_url) {
+      window.open(res.data.download_url, "_blank");
+    } else {
+      toast({
+        variant: "destructive",
+        title: "Download failed",
+        description: res.error?.message ?? "Could not get download link.",
+      });
+    }
   };
 
   return (
@@ -105,6 +143,12 @@ export default function ProjectDashboardPage({
 
       {!projectLoading && !projectError && !projectApiError && project && (
         <>
+          <EditProjectDialog
+            projectId={projectId}
+            open={editProjectOpen}
+            onOpenChange={setEditProjectOpen}
+          />
+
           <div>
             <h1 className="text-3xl font-bold">{project.name}</h1>
             <div className="mt-2 flex items-center gap-2">
@@ -113,17 +157,31 @@ export default function ProjectDashboardPage({
               >
                 {project.status}
               </Badge>
-              {project.location && (
-                <span className="text-sm text-muted-foreground">
-                  {project.location}
-                </span>
-              )}
             </div>
           </div>
 
           <Card>
             <CardHeader>
-              <CardTitle>Project Information</CardTitle>
+              <div className="flex flex-row items-center justify-between gap-2">
+                <CardTitle>Project Information</CardTitle>
+                <div className="flex gap-2">
+                  <Link href={routes.project.files(projectId)}>
+                    <Button variant="outline" size="sm" className="gap-2">
+                      <FolderOpen className="h-4 w-4" />
+                      Files
+                    </Button>
+                  </Link>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setEditProjectOpen(true)}
+                    className="gap-2"
+                  >
+                    <Pencil className="h-4 w-4" />
+                    Edit project
+                  </Button>
+                </div>
+              </div>
             </CardHeader>
             <CardContent className="space-y-3">
               {project.project_number && (
@@ -150,17 +208,6 @@ export default function ProjectDashboardPage({
                   <span className="text-sm font-medium">Address: </span>
                   <span className="text-sm text-muted-foreground">
                     {project.address_display}
-                  </span>
-                </div>
-              )}
-              {project.location && (
-                <div className="flex items-center gap-2">
-                  <LocateFixed className="mr-0 h-4 w-4" />
-                  <span className="text-sm font-medium">
-                    Location (Legacy):{" "}
-                  </span>
-                  <span className="text-sm text-muted-foreground">
-                    {project.location}
                   </span>
                 </div>
               )}
@@ -386,6 +433,108 @@ export default function ProjectDashboardPage({
                             <Badge variant="secondary">
                               {member.project_role}
                             </Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <CardTitle>Project Files</CardTitle>
+                  <CardDescription>
+                    {allFiles.length > 0
+                      ? `${recentFiles.length} of ${allFiles.length} files shown`
+                      : "Files uploaded to this project"}
+                  </CardDescription>
+                </div>
+                <Link href={routes.project.files(projectId)}>
+                  <Button variant="outline" size="sm" className="gap-2">
+                    <FolderOpen className="h-4 w-4" />
+                    View all / Upload
+                    <ExternalLink className="h-4 w-4" />
+                  </Button>
+                </Link>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {filesLoading && (
+                <div className="space-y-3">
+                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-10 w-full" />
+                </div>
+              )}
+
+              {!filesLoading && (filesError || filesApiError) && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription className="flex items-center justify-between">
+                    <span>
+                      {filesApiError?.message ?? "Failed to load files"}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => refetchFiles()}
+                      className="ml-4"
+                    >
+                      <RefreshCw className="mr-2 h-4 w-4" />
+                      Retry
+                    </Button>
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {!filesLoading &&
+                !filesError &&
+                !filesApiError &&
+                recentFiles.length === 0 && (
+                  <p className="text-sm text-muted-foreground">
+                    No files yet. Go to Project Files to upload.
+                  </p>
+                )}
+
+              {!filesLoading &&
+                !filesError &&
+                !filesApiError &&
+                recentFiles.length > 0 && (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Size</TableHead>
+                        <TableHead>Uploaded</TableHead>
+                        <TableHead className="w-[80px]">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {recentFiles.map((file) => (
+                        <TableRow key={file.id}>
+                          <TableCell className="font-medium">
+                            {file.original_filename}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {formatFileSize(file.size_bytes)}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {formatDistanceToNow(new Date(file.created_at), {
+                              addSuffix: true,
+                            })}
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleFileDownload(file.id)}
+                            >
+                              <Download className="h-4 w-4" />
+                            </Button>
                           </TableCell>
                         </TableRow>
                       ))}

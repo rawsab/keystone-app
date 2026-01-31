@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { EnvService } from '../../config/env.service';
 import { randomUUID } from 'crypto';
@@ -31,11 +31,14 @@ export class S3Service {
 
   async generatePresignedUploadUrl(params: {
     companyId: string;
-    projectId: string;
+    projectId?: string | null;
     mimeType: string;
   }): Promise<PresignedUploadResult> {
     const fileId = randomUUID();
-    const objectKey = `companies/${params.companyId}/projects/${params.projectId}/files/${fileId}`;
+    const objectKey =
+      params.projectId != null
+        ? `companies/${params.companyId}/projects/${params.projectId}/files/${fileId}`
+        : `companies/${params.companyId}/files/${fileId}`;
 
     const command = new PutObjectCommand({
       Bucket: this.bucket,
@@ -53,12 +56,24 @@ export class S3Service {
     };
   }
 
+  async getPresignedDownloadUrl(objectKey: string, expiresInSeconds = 3600): Promise<string> {
+    const command = new GetObjectCommand({
+      Bucket: this.bucket,
+      Key: objectKey,
+    });
+    return getSignedUrl(this.s3Client, command, { expiresIn: expiresInSeconds });
+  }
+
   validateObjectKeyPrefix(params: {
     objectKey: string;
     companyId: string;
-    projectId: string;
+    projectId?: string | null;
   }): boolean {
-    const expectedPrefix = `companies/${params.companyId}/projects/${params.projectId}/files/`;
+    if (params.projectId != null) {
+      const expectedPrefix = `companies/${params.companyId}/projects/${params.projectId}/files/`;
+      return params.objectKey.startsWith(expectedPrefix);
+    }
+    const expectedPrefix = `companies/${params.companyId}/files/`;
     return params.objectKey.startsWith(expectedPrefix);
   }
 }

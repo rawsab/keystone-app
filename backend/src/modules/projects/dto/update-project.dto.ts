@@ -1,4 +1,5 @@
-import { IsString, IsOptional, MinLength } from 'class-validator';
+import { IsString, IsOptional, MinLength, IsEnum } from 'class-validator';
+import { ProjectStatus } from '../../../security/rbac';
 
 export class UpdateProjectDto {
   @IsString()
@@ -48,4 +49,8 @@ export class UpdateProjectDto {
   @IsString()
   @IsOptional()
   location?: string;
+
+  @IsEnum(ProjectStatus)
+  @IsOptional()
+  status?: ProjectStatus;
 }
