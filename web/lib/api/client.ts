@@ -38,12 +38,19 @@ export class ApiClient {
 
       const body = await response.json().catch(() => ({}));
       if (!response.ok) {
+        const err = body?.error;
         const message =
-          typeof body?.message === "string"
-            ? body.message
-            : Array.isArray(body?.message)
-              ? body.message[0]
-              : response.statusText || "Request failed";
+          typeof err === "object" &&
+          err !== null &&
+          typeof err.message === "string"
+            ? err.message
+            : typeof body?.message === "string"
+              ? body.message
+              : Array.isArray(body?.message)
+                ? body.message[0]
+                : response.status === 404
+                  ? "Resource not found. Ensure NEXT_PUBLIC_API_BASE_URL points to the backend."
+                  : response.statusText || "Request failed";
         return {
           data: null,
           error: {

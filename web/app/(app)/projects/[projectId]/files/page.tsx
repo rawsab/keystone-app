@@ -3,7 +3,11 @@
 import { use, useRef, useState } from "react";
 import Link from "next/link";
 import { useProject } from "@/lib/queries/projects.queries";
-import { useProjectFiles, useDeleteFile } from "@/lib/queries/files.queries";
+import {
+  useProjectFiles,
+  useRenameFile,
+  useDeleteFile,
+} from "@/lib/queries/files.queries";
 import { useSession } from "@/lib/providers/session-provider";
 import {
   presignUpload,
@@ -29,7 +33,18 @@ import {
   Download,
   Trash2,
   ArrowLeft,
+  Pencil,
 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { routes } from "@/lib/routes";
 import { format } from "date-fns";
 import { formatFileSize } from "@/lib/format/fileSize";
@@ -44,6 +59,9 @@ export default function ProjectFilesPage({
   const { user } = useSession();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+  const [renameOpen, setRenameOpen] = useState(false);
+  const [renameFileId, setRenameFileId] = useState<string | null>(null);
+  const [renameName, setRenameName] = useState("");
 
   const { data: projectResponse } = useProject(projectId);
   const project = projectResponse?.data;
@@ -57,9 +75,37 @@ export default function ProjectFilesPage({
   const files = filesResponse?.data ?? [];
   const filesApiError = filesResponse?.error;
 
+  const renameFile = useRenameFile({ projectId });
   const deleteFile = useDeleteFile({ projectId });
 
   const isOwner = user?.role === "OWNER";
+
+  const openRename = (file: { id: string; original_filename: string }) => {
+    setRenameFileId(file.id);
+    setRenameName(file.original_filename);
+    setRenameOpen(true);
+  };
+
+  const handleRenameSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!renameFileId || !renameName.trim()) return;
+    const res = await renameFile.mutateAsync({
+      fileObjectId: renameFileId,
+      file_name: renameName.trim(),
+    });
+    if (res.error) {
+      toast({
+        variant: "destructive",
+        title: "Rename failed",
+        description: res.error.message,
+      });
+    } else {
+      setRenameOpen(false);
+      setRenameFileId(null);
+      setRenameName("");
+      toast({ title: "File renamed" });
+    }
+  };
 
   const handleUploadClick = () => fileInputRef.current?.click();
 
@@ -149,6 +195,43 @@ export default function ProjectFilesPage({
 
   return (
     <div className="space-y-6">
+      <Dialog open={renameOpen} onOpenChange={setRenameOpen}>
+        <DialogContent>
+          <form onSubmit={handleRenameSubmit}>
+            <DialogHeader>
+              <DialogTitle>Rename file</DialogTitle>
+              <DialogDescription>
+                The new name will be used in the list and when downloading.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="rename-name">File name</Label>
+                <Input
+                  id="rename-name"
+                  value={renameName}
+                  onChange={(e) => setRenameName(e.target.value)}
+                  placeholder="Document.pdf"
+                  required
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setRenameOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={renameFile.isPending}>
+                {renameFile.isPending ? "Saving…" : "Save"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
       <div className="flex items-center gap-4">
         <Link href={routes.project.overview(projectId)}>
           <Button variant="ghost" size="icon">
@@ -232,7 +315,16 @@ export default function ProjectFilesPage({
                     <Button
                       variant="ghost"
                       size="sm"
+                      onClick={() => openRename(file)}
+                      title="Rename"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       onClick={() => handleDownload(file.id)}
+                      title="Download"
                     >
                       <Download className="h-4 w-4" />
                     </Button>

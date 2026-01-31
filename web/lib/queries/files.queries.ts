@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   listProjectFiles,
   listCompanyFiles,
+  renameFile as renameFileApi,
   deleteFile as deleteFileApi,
 } from "../api/endpoints/files";
 
@@ -23,6 +24,28 @@ export function useCompanyFiles() {
   return useQuery({
     queryKey: filesQueryKeys.company(),
     queryFn: listCompanyFiles,
+  });
+}
+
+export function useRenameFile(options?: { projectId?: string }) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      fileObjectId,
+      file_name,
+    }: {
+      fileObjectId: string;
+      file_name: string;
+    }) => renameFileApi(fileObjectId, { file_name }),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: filesQueryKeys.all });
+      if (options?.projectId) {
+        queryClient.invalidateQueries({
+          queryKey: filesQueryKeys.project(options.projectId),
+        });
+      }
+    },
   });
 }
 

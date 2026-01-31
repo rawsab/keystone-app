@@ -70,6 +70,13 @@ export async function getFileDownloadUrl(
   );
 }
 
+export async function renameFile(
+  fileObjectId: string,
+  payload: { file_name: string },
+): ApiResult<FileMetadata> {
+  return apiClient.patch<FileMetadata>(`/files/${fileObjectId}`, payload);
+}
+
 export async function deleteFile(fileObjectId: string): ApiResult<null> {
   return apiClient.delete<null>(`/files/${fileObjectId}`);
 }

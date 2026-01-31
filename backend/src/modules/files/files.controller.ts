@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Delete, Body, Param, UseGuards } from '@nestjs/common';
+import { Controller, Post, Get, Patch, Delete, Body, Param, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../../security/guards/jwt-auth.guard';
 import { CurrentUser } from '../../security/decorators/current-user.decorator';
 import { AuthUser } from '../../security/jwt.strategy';
@@ -8,6 +8,7 @@ import { PresignResponseDto, PresignBatchResponseDto } from './dto/presign-respo
 import { FinalizeRequestDto } from './dto/finalize-request.dto';
 import { FileResponseDto } from './dto/file-response.dto';
 import { CompanyFileListItemDto } from './dto/company-file-list-item.dto';
+import { RenameFileDto } from './dto/rename-file.dto';
 import { ApiResponse } from '../../common/interfaces/api-response.interface';
 
 @Controller('api/v1')
@@ -107,6 +108,28 @@ export class FilesController {
 
     return {
       data: { download_url: downloadUrl },
+      error: null,
+    };
+  }
+
+  @Patch('files/:fileObjectId')
+  async renameFile(
+    @CurrentUser() user: AuthUser,
+    @Param('fileObjectId') fileObjectId: string,
+    @Body() dto: RenameFileDto,
+  ): Promise<ApiResponse<FileResponseDto>> {
+    const file = await this.filesService.renameFile(
+      {
+        userId: user.userId,
+        companyId: user.companyId,
+        role: user.role,
+      },
+      fileObjectId,
+      dto,
+    );
+
+    return {
+      data: file,
       error: null,
     };
   }

@@ -16,6 +16,7 @@ import { PresignResponseDto, PresignBatchResponseDto } from './dto/presign-respo
 import { FinalizeRequestDto } from './dto/finalize-request.dto';
 import { FileResponseDto } from './dto/file-response.dto';
 import { CompanyFileListItemDto } from './dto/company-file-list-item.dto';
+import { RenameFileDto } from './dto/rename-file.dto';
 
 @Injectable()
 export class FilesService {
@@ -364,6 +365,108 @@ export class FilesService {
       }
     }
 
-    return this.s3Service.getPresignedDownloadUrl(file.objectKey);
+    const contentDisposition = `attachment; filename="${this.escapeContentDispositionFilename(file.originalFilename)}"`;
+    return this.s3Service.getPresignedDownloadUrl(file.objectKey, {
+      responseContentDisposition: contentDisposition,
+    });
+  }
+
+  private escapeContentDispositionFilename(name: string): string {
+    return name.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+  }
+
+  async renameFile(
+    user: PolicyUser,
+    fileObjectId: string,
+    dto: RenameFileDto,
+  ): Promise<FileResponseDto> {
+    const file = await this.prisma.fileObject.findFirst({
+      where: {
+        id: fileObjectId,
+        companyId: user.companyId,
+        deletedAt: null,
+      },
+      include: {
+        uploadedBy: {
+          select: {
+            id: true,
+            fullName: true,
+          },
+        },
+      },
+    });
+
+    if (!file) {
+      throw new NotFoundException('File not found');
+    }
+
+    if (file.projectId != null) {
+      const isMember = await this.membershipService.isProjectMember({
+        userId: user.userId,
+        companyId: user.companyId,
+        projectId: file.projectId,
+      });
+      if (!isMember) {
+        throw new ForbiddenException('Not a project member');
+      }
+    }
+
+    const newName = dto.file_name.trim();
+    if (!newName) {
+      throw new BadRequestException('File name is required');
+    }
+
+    const updated = await this.prisma.fileObject.update({
+      where: { id: fileObjectId },
+      data: { originalFilename: newName },
+      include: {
+        uploadedBy: {
+          select: {
+            id: true,
+            fullName: true,
+          },
+        },
+      },
+    });
+
+    // Skip S3 metadata update when using LocalStack; it often fails on copy-to-self (404/InvalidRequest).
+    // DB name is already updated; with real AWS we update Content-Disposition for download filename.
+    const contentDisposition = `attachment; filename="${this.escapeContentDispositionFilename(newName)}"`;
+    if (!this.envService.s3Endpoint) {
+      try {
+        await this.s3Service.setObjectContentDisposition(
+          file.objectKey,
+          contentDisposition,
+          file.mimeType,
+        );
+      } catch {
+        // DB is already updated; S3 metadata update is best-effort for display on download
+      }
+    }
+
+    await this.auditService.record({
+      companyId: user.companyId,
+      actorUserId: user.userId,
+      projectId: file.projectId ?? undefined,
+      entityType: 'FILE_OBJECT',
+      entityId: file.id,
+      action: 'RENAMED',
+      metadata: {
+        previousName: file.originalFilename,
+        newName: newName,
+      },
+    });
+
+    return {
+      id: updated.id,
+      original_filename: updated.originalFilename,
+      mime_type: updated.mimeType,
+      size_bytes: Number(updated.sizeBytes),
+      uploaded_by: {
+        id: updated.uploadedBy.id,
+        full_name: updated.uploadedBy.fullName,
+      },
+      created_at: updated.createdAt.toISOString(),
+    };
   }
 }

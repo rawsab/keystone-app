@@ -1,5 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import {
+  S3Client,
+  PutObjectCommand,
+  GetObjectCommand,
+  CopyObjectCommand,
+} from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { EnvService } from '../../config/env.service';
 import { randomUUID } from 'crypto';
@@ -53,9 +58,40 @@ export class S3Service {
     return { uploadUrl, objectKey };
   }
 
-  async getPresignedDownloadUrl(objectKey: string, expiresInSeconds = 3600): Promise<string> {
-    const command = new GetObjectCommand({ Bucket: this.bucket, Key: objectKey });
-    return getSignedUrl(this.s3Client, command, { expiresIn: expiresInSeconds });
+  async getPresignedDownloadUrl(
+    objectKey: string,
+    options?: { expiresInSeconds?: number; responseContentDisposition?: string },
+  ): Promise<string> {
+    const expiresIn = options?.expiresInSeconds ?? 3600;
+    const command = new GetObjectCommand({
+      Bucket: this.bucket,
+      Key: objectKey,
+      ...(options?.responseContentDisposition && {
+        ResponseContentDisposition: options.responseContentDisposition,
+      }),
+    });
+    return getSignedUrl(this.s3Client, command, { expiresIn });
+  }
+
+  /**
+   * Copy object to itself with new Content-Disposition (and optional ContentType) so the object store reflects the display filename.
+   */
+  async setObjectContentDisposition(
+    objectKey: string,
+    contentDisposition: string,
+    contentType?: string,
+  ): Promise<void> {
+    const copySource = encodeURI(`${this.bucket}/${objectKey}`);
+    await this.s3Client.send(
+      new CopyObjectCommand({
+        Bucket: this.bucket,
+        CopySource: copySource,
+        Key: objectKey,
+        ContentDisposition: contentDisposition,
+        ...(contentType && { ContentType: contentType }),
+        MetadataDirective: 'REPLACE',
+      }),
+    );
   }
 
   validateObjectKeyPrefix(params: {
