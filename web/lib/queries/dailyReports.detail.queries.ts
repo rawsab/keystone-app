@@ -3,6 +3,7 @@ import {
   getDailyReport,
   updateDailyReport,
   submitDailyReport,
+  refreshDailyReportWeather,
   UpdateDailyReportPayload,
 } from "../api/endpoints/dailyReports";
 
@@ -51,6 +52,33 @@ export function useSubmitDailyReport(reportId: string, projectId: string) {
       queryClient.invalidateQueries({
         queryKey: ["dashboard"],
       });
+    },
+  });
+}
+
+export function useRefreshDailyReportWeather(
+  reportId: string,
+  projectId?: string,
+) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: () => refreshDailyReportWeather(reportId),
+    onSuccess: (response) => {
+      if (response?.data) {
+        queryClient.setQueryData(["dailyReports", "detail", reportId], {
+          data: response.data,
+          error: null,
+        });
+      }
+      queryClient.invalidateQueries({
+        queryKey: ["dailyReports", "detail", reportId],
+      });
+      if (projectId) {
+        queryClient.invalidateQueries({
+          queryKey: ["projects", projectId, "dailyReports"],
+        });
+      }
     },
   });
 }

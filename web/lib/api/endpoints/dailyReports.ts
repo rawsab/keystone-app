@@ -24,6 +24,17 @@ export interface DailyReportAttachment {
   size_bytes: number;
 }
 
+export interface DailyReportWeatherSnapshot {
+  date?: string;
+  location_label?: string;
+  temp_min_c?: number | null;
+  temp_max_c?: number | null;
+  precipitation_mm?: number | null;
+  wind_max_kph?: number | null;
+  conditions?: string | null;
+  raw?: Record<string, unknown>;
+}
+
 export interface DailyReportDetail {
   id: string;
   project_id: string;
@@ -33,6 +44,14 @@ export interface DailyReportDetail {
   issues_delays_text: string | null;
   notes_text: string | null;
   weather_observed: Record<string, unknown> | null;
+  weather_snapshot: DailyReportWeatherSnapshot | null;
+  weather_snapshot_source: string | null;
+  weather_snapshot_taken_at: string | null;
+  weather_summary_text: string | null;
+  weather_observed_text: string | null;
+  weather_observed_flags: Record<string, boolean> | null;
+  /** Set when refresh was attempted and failed; explains why weather is missing */
+  weather_refresh_error: string | null;
   hours_worked_total: number | null;
   created_by: {
     id: string;
@@ -48,7 +67,11 @@ export interface UpdateDailyReportPayload {
   issues_delays_text?: string;
   notes_text?: string;
   weather_observed?: Record<string, unknown>;
+  weather_observed_text?: string;
+  weather_observed_flags?: Record<string, boolean>;
   hours_worked_total?: number;
+  /** When true, clears the auto-captured weather snapshot. */
+  clear_weather_snapshot?: boolean;
 }
 
 export async function listDailyReports(
@@ -80,14 +103,10 @@ export async function updateDailyReport(
   reportId: string,
   payload: UpdateDailyReportPayload,
 ): ApiResult<DailyReportDetail> {
-  console.log("API Call - PATCH /daily-reports/" + reportId);
-  console.log("Payload:", payload);
-  const result = await apiClient.patch<DailyReportDetail>(
+  return apiClient.patch<DailyReportDetail>(
     `/daily-reports/${reportId}`,
     payload,
   );
-  console.log("Response:", result);
-  return result;
 }
 
 export async function submitDailyReport(
@@ -97,6 +116,13 @@ export async function submitDailyReport(
     `/daily-reports/${reportId}/submit`,
     {},
   );
+}
+
+export async function refreshDailyReportWeather(
+  reportId: string,
+): ApiResult<DailyReportDetail> {
+  const url = `/daily-reports/${reportId}/weather/refresh`;
+  return apiClient.post<DailyReportDetail>(url, {});
 }
 
 export async function getOrCreateDailyReportDraft(

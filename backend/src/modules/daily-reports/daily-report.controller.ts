@@ -65,6 +65,27 @@ export class DailyReportController {
     };
   }
 
+  @Post(':reportId/weather/refresh')
+  async refreshWeather(
+    @CurrentUser() user: AuthUser,
+    @Param('reportId', ParseUUIDPipe) reportId: string,
+  ): Promise<ApiResponse<DailyReportResponseDto>> {
+    console.log('[DailyReport CONTROLLER] POST /weather/refresh received', { reportId });
+    const report = await this.dailyReportsService.refreshWeatherSnapshot(
+      {
+        userId: user.userId,
+        companyId: user.companyId,
+        role: user.role,
+      },
+      reportId,
+    );
+
+    return {
+      data: report,
+      error: null,
+    };
+  }
+
   @Post(':reportId/submit')
   async submitReport(
     @CurrentUser() user: AuthUser,

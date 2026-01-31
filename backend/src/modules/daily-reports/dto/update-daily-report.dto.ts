@@ -1,4 +1,4 @@
-import { IsOptional, IsString, IsNumber, IsObject } from 'class-validator';
+import { IsOptional, IsString, IsNumber, IsObject, IsBoolean } from 'class-validator';
 
 export class UpdateDailyReportDto {
   @IsOptional()
@@ -18,6 +18,19 @@ export class UpdateDailyReportDto {
   weather_observed?: any;
 
   @IsOptional()
+  @IsString()
+  weather_observed_text?: string;
+
+  @IsOptional()
+  @IsObject()
+  weather_observed_flags?: Record<string, boolean>;
+
+  @IsOptional()
   @IsNumber()
   hours_worked_total?: number;
+
+  /** When true, clears the auto-captured weather snapshot (source, taken_at, summary). */
+  @IsOptional()
+  @IsBoolean()
+  clear_weather_snapshot?: boolean;
 }

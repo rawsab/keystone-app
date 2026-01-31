@@ -6,6 +6,7 @@ import {
   useDailyReport,
   useUpdateDailyReport,
   useSubmitDailyReport,
+  useRefreshDailyReportWeather,
 } from "@/lib/queries/dailyReports.detail.queries";
 import { useProject } from "@/lib/queries/projects.queries";
 import { ReportHeader } from "@/components/app/daily-reports/ReportHeader";
@@ -54,6 +55,8 @@ export default function DailyReportDetailPage({
     issues_delays_text: "",
     notes_text: "",
     hours_worked_total: "",
+    weather_observed_text: "",
+    weather_observed_flags: {} as Record<string, boolean>,
   });
 
   const [isInitialized, setIsInitialized] = useState(false);
@@ -64,12 +67,18 @@ export default function DailyReportDetailPage({
       issues_delays_text: report.issues_delays_text || "",
       notes_text: report.notes_text || "",
       hours_worked_total: report.hours_worked_total?.toString() || "",
+      weather_observed_text: report.weather_observed_text || "",
+      weather_observed_flags: report.weather_observed_flags ?? {},
     });
     setIsInitialized(true);
   }
 
   const updateMutation = useUpdateDailyReport(reportId, projectId);
   const submitMutation = useSubmitDailyReport(reportId, projectId);
+  const refreshWeatherMutation = useRefreshDailyReportWeather(
+    reportId,
+    projectId,
+  );
 
   const isReadOnly = report?.status === "SUBMITTED";
 
@@ -79,8 +88,19 @@ export default function DailyReportDetailPage({
   const [submitDialogOpen, setSubmitDialogOpen] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
+  /** Optimistic: hide auto weather card as soon as user clicks X; cleared when report has weather again */
+  const [autoWeatherRemoved, setAutoWeatherRemoved] = useState(false);
 
-  const handleFormChange = (field: string, value: string) => {
+  const handleRemoveAutoWeather = useCallback(() => {
+    setAutoWeatherRemoved(true);
+    setHasUnsavedChanges(true);
+    // Clear is persisted when user clicks Save, not immediately
+  }, []);
+
+  const handleFormChange = (
+    field: string,
+    value: string | Record<string, boolean>,
+  ) => {
     setFormData((prev) => ({
       ...prev,
       [field]: value,
@@ -136,6 +156,11 @@ export default function DailyReportDetailPage({
       work_completed_text: formData.work_completed_text,
       issues_delays_text: formData.issues_delays_text || undefined,
       notes_text: formData.notes_text || undefined,
+      weather_observed_text: formData.weather_observed_text || undefined,
+      weather_observed_flags:
+        Object.keys(formData.weather_observed_flags).length > 0
+          ? formData.weather_observed_flags
+          : undefined,
     };
 
     const hoursValue = parseFloat(formData.hours_worked_total);
@@ -143,8 +168,13 @@ export default function DailyReportDetailPage({
       payload.hours_worked_total = hoursValue;
     }
 
+    if (autoWeatherRemoved) {
+      payload.clear_weather_snapshot = true;
+    }
+
     const currentData = JSON.stringify(formData);
-    if (currentData === lastSavedData) {
+    const formUnchanged = currentData === lastSavedData;
+    if (formUnchanged && !hasUnsavedChanges) {
       console.log("No changes to save");
       return;
     }
@@ -158,12 +188,24 @@ export default function DailyReportDetailPage({
         setHasUnsavedChanges(false);
         setLastSavedData(currentData);
         setLocalUpdatedAt(new Date().toISOString());
+        if (autoWeatherRemoved) {
+          setAutoWeatherRemoved(false);
+          refetchReport();
+        }
       },
       onError: (error) => {
         console.error("Save failed:", error);
       },
     });
-  }, [formData, lastSavedData, updateMutation, reportId]);
+  }, [
+    formData,
+    lastSavedData,
+    hasUnsavedChanges,
+    autoWeatherRemoved,
+    updateMutation,
+    reportId,
+    refetchReport,
+  ]);
 
   if (report && !isInitialized && !lastSavedData) {
     setLastSavedData(
@@ -172,6 +214,8 @@ export default function DailyReportDetailPage({
         issues_delays_text: report.issues_delays_text || "",
         notes_text: report.notes_text || "",
         hours_worked_total: report.hours_worked_total?.toString() || "",
+        weather_observed_text: report.weather_observed_text || "",
+        weather_observed_flags: report.weather_observed_flags ?? {},
       }),
     );
   }
@@ -319,6 +363,33 @@ export default function DailyReportDetailPage({
         isReadOnly={isReadOnly}
         formData={formData}
         onFormChange={handleFormChange}
+        weather={(() => {
+          const w = {
+            weather_snapshot: report.weather_snapshot ?? null,
+            weather_snapshot_source: report.weather_snapshot_source ?? null,
+            weather_snapshot_taken_at: report.weather_snapshot_taken_at ?? null,
+            weather_summary_text: report.weather_summary_text ?? null,
+            weather_refresh_error: report.weather_refresh_error ?? null,
+          };
+          return w;
+        })()}
+        reportId={reportId}
+        projectId={projectId}
+        onRemoveAutoWeather={!isReadOnly ? handleRemoveAutoWeather : undefined}
+        hideAutoWeatherCard={autoWeatherRemoved}
+        onAddAutoWeather={
+          !isReadOnly
+            ? () =>
+                refreshWeatherMutation.mutate(undefined, {
+                  onSuccess: () => {
+                    setAutoWeatherRemoved(false);
+                    setHasUnsavedChanges(true);
+                  },
+                })
+            : undefined
+        }
+        onWeatherRefreshed={() => setHasUnsavedChanges(true)}
+        isRefreshingWeather={refreshWeatherMutation.isPending}
       />
 
       <AttachmentsSection

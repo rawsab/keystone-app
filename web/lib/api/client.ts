@@ -36,8 +36,23 @@ export class ApiClient {
         headers,
       });
 
-      const data = await response.json();
-      return data as ApiResponse<T>;
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        const message =
+          typeof body?.message === "string"
+            ? body.message
+            : Array.isArray(body?.message)
+              ? body.message[0]
+              : response.statusText || "Request failed";
+        return {
+          data: null,
+          error: {
+            code: String(response.status),
+            message,
+          },
+        };
+      }
+      return (body ?? { data: null, error: null }) as ApiResponse<T>;
     } catch {
       return {
         data: null,

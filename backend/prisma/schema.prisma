@@ -119,13 +119,19 @@ model ProjectMember {
 // ============================================================================
 
 model DailyReport {
-  id                String    @id @default(uuid()) @db.Uuid
-  companyId         String    @map("company_id") @db.Uuid
-  projectId         String    @map("project_id") @db.Uuid
-  reportDate        DateTime  @map("report_date") @db.Date
-  status            String    @default("DRAFT")
-  weatherObserved   Json?     @map("weather_observed") @db.JsonB
-  workCompletedText String    @default("") @map("work_completed_text")
+  id                      String    @id @default(uuid()) @db.Uuid
+  companyId               String    @map("company_id") @db.Uuid
+  projectId               String    @map("project_id") @db.Uuid
+  reportDate              DateTime  @map("report_date") @db.Date
+  status                  String    @default("DRAFT")
+  weatherObserved         Json?     @map("weather_observed") @db.JsonB
+  weatherSnapshot         Json?     @map("weather_snapshot") @db.JsonB
+  weatherSnapshotSource   String?   @map("weather_snapshot_source")
+  weatherSnapshotTakenAt  DateTime? @map("weather_snapshot_taken_at") @db.Timestamptz(6)
+  weatherSummaryText     String?   @map("weather_summary_text")
+  weatherObservedText    String?   @map("weather_observed_text")
+  weatherObservedFlags    Json?     @map("weather_observed_flags") @db.JsonB
+  workCompletedText      String    @default("") @map("work_completed_text")
   issuesDelaysText  String?   @map("issues_delays_text")
   notesText         String?   @map("notes_text")
   hoursWorkedTotal  Decimal?  @map("hours_worked_total") @db.Decimal(6, 2)

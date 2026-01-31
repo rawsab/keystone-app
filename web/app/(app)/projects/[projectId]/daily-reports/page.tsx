@@ -242,7 +242,7 @@ export default function DailyReportsListPage({
                   onClick={handleResetFilters}
                   className="w-full"
                 >
-                  <X className="mr-2 h-4 w-4" />
+                  <X className="mr-0 h-4 w-4" />
                   Reset Filters
                 </Button>
               )}
@@ -313,7 +313,7 @@ export default function DailyReportsListPage({
                     onClick={handleResetFilters}
                     className="mt-4"
                   >
-                    <X className="mr-2 h-4 w-4" />
+                    <X className="mr-0 h-4 w-4" />
                     Reset Filters
                   </Button>
                 )}
