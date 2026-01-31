@@ -17,15 +17,17 @@ export class S3Service {
   constructor(private readonly envService: EnvService) {
     this.bucket = envService.s3Bucket;
 
+    const endpoint = envService.s3Endpoint; // e.g. http://localhost:4566 (or http://localstack:4566 inside docker)
+
     this.s3Client = new S3Client({
       region: envService.awsRegion,
-      credentials:
-        envService.awsAccessKeyId && envService.awsSecretAccessKey
-          ? {
-              accessKeyId: envService.awsAccessKeyId,
-              secretAccessKey: envService.awsSecretAccessKey,
-            }
-          : undefined,
+      endpoint: envService.s3Endpoint || undefined,
+      forcePathStyle: envService.s3ForcePathStyle ?? false, // important for localstack reliability
+      credentials: {
+        // LocalStack accepts any static keys, but they must be present for signing
+        accessKeyId: envService.awsAccessKeyId || 'test',
+        secretAccessKey: envService.awsSecretAccessKey || 'test',
+      },
     });
   }
 
@@ -46,21 +48,13 @@ export class S3Service {
       ContentType: params.mimeType,
     });
 
-    const uploadUrl = await getSignedUrl(this.s3Client, command, {
-      expiresIn: 300,
-    });
+    const uploadUrl = await getSignedUrl(this.s3Client, command, { expiresIn: 300 });
 
-    return {
-      uploadUrl,
-      objectKey,
-    };
+    return { uploadUrl, objectKey };
   }
 
   async getPresignedDownloadUrl(objectKey: string, expiresInSeconds = 3600): Promise<string> {
-    const command = new GetObjectCommand({
-      Bucket: this.bucket,
-      Key: objectKey,
-    });
+    const command = new GetObjectCommand({ Bucket: this.bucket, Key: objectKey });
     return getSignedUrl(this.s3Client, command, { expiresIn: expiresInSeconds });
   }
 

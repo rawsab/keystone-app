@@ -40,4 +40,14 @@ export class EnvService {
   get awsSecretAccessKey(): string | undefined {
     return this.env.AWS_SECRET_ACCESS_KEY;
   }
+
+  get s3Endpoint(): string | undefined {
+    const v = process.env.S3_ENDPOINT?.trim();
+    return v && v.length > 0 ? v : undefined;
+  }
+
+  get s3ForcePathStyle(): boolean {
+    const v = process.env.S3_FORCE_PATH_STYLE?.trim().toLowerCase();
+    return v === 'true' || v === '1' || v === 'yes';
+  }
 }
