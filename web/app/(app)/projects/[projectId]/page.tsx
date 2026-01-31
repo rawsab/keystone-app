@@ -125,7 +125,7 @@ export default function ProjectDashboardPage({
             <CardHeader>
               <CardTitle>Project Information</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-2">
+            <CardContent className="space-y-3">
               {project.project_number && (
                 <div className="flex items-center gap-2">
                   <Hash className="mr-0 h-4 w-4" />

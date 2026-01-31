@@ -16,7 +16,6 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -32,10 +31,18 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { Label } from "@/components/ui/label";
 import { AlertCircle, RefreshCw, X } from "lucide-react";
 import { routes } from "@/lib/routes";
 import { format, formatDistanceToNow } from "date-fns";
-import { CalendarDays, CircleCheck, User, Clock } from "lucide-react";
+import { CalendarIcon } from "lucide-react";
+import { formatDateYYYYMMDDLocal } from "@/lib/dates";
 
 export default function DailyReportsListPage({
   params,
@@ -147,29 +154,69 @@ export default function DailyReportsListPage({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-4">
+          <div className="grid gap-4 lg:grid-cols-4">
             <div className="space-y-2">
-              <label htmlFor="from-date" className="text-sm font-medium">
-                From Date
-              </label>
-              <Input
-                id="from-date"
-                type="date"
-                value={fromDate}
-                onChange={(e) => handleFromDateChange(e.target.value)}
-              />
+              <Label htmlFor="from-date">From Date</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    id="from-date"
+                    variant="outline"
+                    className="w-full justify-start text-left font-normal"
+                  >
+                    <CalendarIcon className="mr-0 h-4 w-4" />
+                    {fromDate
+                      ? format(new Date(fromDate + "T00:00:00"), "PPP")
+                      : "Pick from date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={
+                      fromDate ? new Date(fromDate + "T00:00:00") : undefined
+                    }
+                    onSelect={(date) => {
+                      if (date) {
+                        handleFromDateChange(formatDateYYYYMMDDLocal(date));
+                      }
+                    }}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
 
             <div className="space-y-2">
-              <label htmlFor="to-date" className="text-sm font-medium">
-                To Date
-              </label>
-              <Input
-                id="to-date"
-                type="date"
-                value={toDate}
-                onChange={(e) => handleToDateChange(e.target.value)}
-              />
+              <Label htmlFor="to-date">To Date</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    id="to-date"
+                    variant="outline"
+                    className="w-full justify-start text-left font-normal"
+                  >
+                    <CalendarIcon className="mr-0 h-4 w-4" />
+                    {toDate
+                      ? format(new Date(toDate + "T00:00:00"), "PPP")
+                      : "Pick to date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={
+                      toDate ? new Date(toDate + "T00:00:00") : undefined
+                    }
+                    onSelect={(date) => {
+                      if (date) {
+                        handleToDateChange(formatDateYYYYMMDDLocal(date));
+                      }
+                    }}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
 
             <div className="space-y-2">
